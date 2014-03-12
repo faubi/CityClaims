@@ -1,0 +1,12 @@
+name: CityClaims
+version: 1.0.0
+author: faubiguy
+
+main: faubiguy.cityclaims.CityClaims
+depend: [GriefPrevention, Vault]
+
+commands:
+  city:
+    description: General CityClaims command
+ 
+#permissions: None right now
