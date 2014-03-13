@@ -52,11 +52,7 @@ public class CityClaims extends JavaPlugin {
 	public boolean onCommand(CommandSender sender, Command cmd, String label,
 			String[] args) {
 		if (cmd.getName().equalsIgnoreCase("city")) {
-			String error = CommandHandler.handleCommand(sender, args[0],
-					Arrays.copyOfRange(args, 1, args.length - 1));
-			if (error != null) {
-				sender.sendMessage(error);
-			}
+			CommandHandler.handleCommand(sender, args[0], Arrays.copyOfRange(args, 1, args.length - 1));
 			return true;
 		}
 		return false;

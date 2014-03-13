@@ -51,6 +51,9 @@ public class City {
 	}
 
 	static City getCity(Claim claim) {
+		if (claim == null) {
+			return null;
+		}
 		if (claim.parent != null) {
 			claim = claim.parent;
 		}
