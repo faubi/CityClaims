@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 import org.bukkit.configuration.file.FileConfiguration;
@@ -12,14 +13,19 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 public class CityFlags {
 
-	public static final CityFlags DEFAULTS = new CityFlags(-1, // plotlimit
-			true, // requireempty
-			true, // allowsell
-			1, // sellmultiplier
-			true, // playersell
-			true, // allowwarp
-			true // havetreasury
-	);
+	public static final CityFlags DEFAULTS;
+	static {
+		Map<String,Object> flags = new HashMap<>();
+		flags.put("plotlimit", -1);
+		flags.put("requireempty", true);
+		flags.put("allowsell", true);
+		flags.put("sellmultiplier", 1);
+		flags.put("playersell", true);
+		flags.put("allowwarp", true);
+		flags.put("havetreasury", true);
+		flags.put("hidden", false);
+		DEFAULTS = new CityFlags(flags);
+	}
 
 	private Map<String, Object> flags;
 
@@ -33,7 +39,7 @@ public class CityFlags {
 
 	public CityFlags(int plotlimit, boolean requireempty, boolean allowsell,
 			double sellmultiplier, boolean playersell, boolean allowwarp,
-			boolean havetreasury) { // Construct with flags as parameters
+			boolean havetreasury, boolean hidden) { // Construct with flags as parameters
 		flags = new HashMap<>();
 		flags.put("plotlimit", plotlimit);
 		flags.put("requireempty", requireempty);
@@ -42,6 +48,7 @@ public class CityFlags {
 		flags.put("playersell", playersell);
 		flags.put("allowwarp", allowwarp);
 		flags.put("havetreasury", havetreasury);
+		flags.put("hidden", hidden);
 	}
 
 	public Map<String, Object> getMap() {
@@ -64,6 +71,30 @@ public class CityFlags {
 			}
 		}
 		return value;
+	}
+	
+	public Boolean getFlagBoolean(String flag) {
+		Object value = getFlag(flag);
+		if (value instanceof Boolean) {
+			return (Boolean)value;
+		}
+		return null;
+	}
+	
+	public Double getFlagDouble(String flag) {
+		Object value = getFlag(flag);
+		if (value instanceof Double) {
+			return (Double)value;
+		}
+		return null;
+	}
+	
+	public Integer getFlagInt(String flag) {
+		Object value = getFlag(flag);
+		if (value instanceof Integer) {
+			return (Integer)value;
+		}
+		return null;
 	}
 
 	public boolean setFlag(String flag, Object value) {
@@ -114,6 +145,16 @@ public class CityFlags {
 			return false;
 		}
 		return true;
+	}
+	
+	public static List<String> listFlags(boolean includeLocked) {
+		List<String> flagList = new ArrayList<String>();
+		for (String flag : DEFAULTS.getMap().keySet()) {
+			if (includeLocked || !CityClaims.instance.lockedFlags.contains(flag)) {
+				flagList.add(flag);
+			}
+		}
+		return flagList;
 	}
 
 }
