@@ -75,7 +75,7 @@ public class CityFile {
 	}
 
 	public long loadID() throws CityLoadingException {
-		if (!file.isLong("id")) {
+		if (!(file.isLong("id") || file.isInt("id"))) {
 			throw new CityLoadingException("Id missing or unreadable",
 					city.name);
 		}
@@ -118,20 +118,22 @@ public class CityFile {
 
 	public Map<Long, Plot> loadPlots() throws CityLoadingException {
 		Map<Long, Plot> plots = new HashMap<>();
-		for (String key : file.getConfigurationSection("plots").getKeys(false)) {
-			long id;
-			try {
-				id = Long.parseLong(key);
-			} catch (NumberFormatException e) {
-				throw new CityLoadingException("Unreadable plot id: " + key,
-						city.name);
+		if(file.isConfigurationSection("plots")) {		
+			for (String key : file.getConfigurationSection("plots").getKeys(false)) {
+				long id;
+				try {
+					id = Long.parseLong(key);
+				} catch (NumberFormatException e) {
+					throw new CityLoadingException("Unreadable plot id: " + key,
+							city.name);
+				}
+				Plot plot = loadPlot(id);
+				if (plot == null) {
+					throw new CityLoadingException("Unable to load plot: " + id,
+							city.name);
+				}
+				plots.put(id, loadPlot(id));
 			}
-			Plot plot = loadPlot(id);
-			if (plot == null) {
-				throw new CityLoadingException("Unable to load plot: " + id,
-						city.name);
-			}
-			plots.put(id, loadPlot(id));
 		}
 		return plots;
 	}
@@ -196,13 +198,15 @@ public class CityFile {
 
 	public Set<PlotType> loadTypes() throws CityLoadingException {
 		Set<PlotType> types = new HashSet<>();
-		for (String key : file.getConfigurationSection("types").getKeys(false)) {
-			PlotType type = loadType(key);
-			if (type == null) {
-				throw new CityLoadingException("Unable to load type: " + key,
-						city.name);
+		if (file.isConfigurationSection("types")) {
+			for (String key : file.getConfigurationSection("types").getKeys(false)) {
+				PlotType type = loadType(key);
+				if (type == null) {
+					throw new CityLoadingException("Unable to load type: " + key,
+							city.name);
+				}
+				types.add(type);
 			}
-			types.add(type);
 		}
 		return types;
 	}
@@ -255,14 +259,14 @@ public class CityFile {
 
 	public double loadTreasury() throws CityLoadingException {
 		if (!file.isDouble("treasury")) {
-			throw new CityLoadingException("Id missing or unreadable",
+			throw new CityLoadingException("Treasury balance missing or unreadable",
 					city.name);
 		}
-		return file.getDouble("id");
+		return file.getDouble("treasury");
 	}
 
 	public boolean saveTreasury(boolean saveFile) {
-		file.set("id", city.base.getID());
+		file.set("treasury", city.treasury);
 		if (saveFile) {
 			return save();
 		}

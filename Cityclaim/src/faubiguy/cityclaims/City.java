@@ -97,6 +97,8 @@ public class City {
 		city.types = new HashSet<>();
 		city.plots = new HashMap<>();
 		city.sizeTypes = new HashMap<>();
+		city.id = base.getID();
+		city.treasury = 0;
 		city.save();
 		names.put(base.getID(), name);
 		saveIDFile();
@@ -195,7 +197,7 @@ public class City {
 		return null;
 	}
 
-	public String stringSetFlag(String flag, Object value) {
+	public String setFlag(String flag, Object value) {
 		return setFlag(flag, value, false);
 	}
 
@@ -214,7 +216,7 @@ public class City {
 	public static String loadIDFile() {
 		FileConfiguration idFile = YamlConfiguration
 				.loadConfiguration(new File(CityClaims.instance.dataPath,
-						"ids.yaml"));
+						"ids.yml"));
 		Map<Long, String> idMap = new HashMap<>();
 		Map<String, Object> loadedMap = idFile.getValues(false);
 		try {
@@ -232,7 +234,7 @@ public class City {
 	}
 
 	public static boolean saveIDFile() {
-		File idFilePath = new File(CityClaims.instance.dataPath, "ids.yaml");
+		File idFilePath = new File(CityClaims.instance.dataPath, "ids.yml");
 		FileConfiguration idFile = YamlConfiguration
 				.loadConfiguration(idFilePath);
 		for (Map.Entry<Long, String> entry : names.entrySet()) {

@@ -38,21 +38,30 @@ public class CityClaims extends JavaPlugin {
 		File cityDir = new File(dataPath, "cities");
 		if (cityDir.isDirectory()){
 			for (String cityname : cityDir.list()) {
+				if (!cityname.endsWith(".yml")) {
+					continue;
+				}
+				cityname = cityname.substring(0, cityname.length() - 4);
 				try {
 					City.loadCity(cityname);
 				} catch (CityLoadingException e) {
 				getLogger().warning(
-						"Error loading " + e.cityname + ":" + e.getMessage());
+						"Error loading " + e.cityname + ": " + e.getMessage());
 				}
 			}
 		}
+		CommandHandler.initialize();
 		return null;
 	}
 
 	public boolean onCommand(CommandSender sender, Command cmd, String label,
 			String[] args) {
 		if (cmd.getName().equalsIgnoreCase("city")) {
-			CommandHandler.handleCommand(sender, args[0], Arrays.copyOfRange(args, 1, args.length - 1));
+			if (args.length == 0) {
+				sender.sendMessage("You must specify a subcommand");
+				return true;
+			}
+			CommandHandler.handleCommand(sender, args[0], args.length >= 2 ? Arrays.copyOfRange(args, 1, args.length) : new String[0]);
 			return true;
 		}
 		return false;

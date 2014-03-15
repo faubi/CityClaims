@@ -15,7 +15,7 @@ public final class CommandHandler {
 	public static Map<String,Command> commands;
 	public static Map<String,CommandConfirmationTimeoutTask> unconfirmed; //Map from sender's username to unconfirmed command name
 	
-	public static final String NO_PERMISSION_MESSAGE = "You do not have permission to use this command"; 
+	public static final String NO_PERMISSION_MESSAGE = "You do not have permission to do this."; 
 	
 	public static interface Command {
 		public abstract void run(CommandSender sender, String[] arguments, boolean confirmed);
@@ -56,19 +56,23 @@ public final class CommandHandler {
 		Command command = commands.get(commandName);
 		if (command == null) {
 			sender.sendMessage("No such command: /city " + commandName);
+			return;
 		}
 		command.run(sender, arguments, false);
 	}
 	
 	static void initialize() {
 		commands = new HashMap<>();
+		unconfirmed = new HashMap<>();
 		
-		commands.put("newcity", new Command() {public void run(CommandSender sender, String[] arguments, boolean confirmed) {
-			if (!(sender.hasPermission("cityclaims.admin.createcity"))) {
+		commands.put("create", new Command() {public void run(CommandSender sender, String[] arguments, boolean confirmed) {
+			if (!(sender.hasPermission("cityclaims.admin.create"))) {
 				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
 			}
 			if (!(arguments.length >= 1)) {
 				sender.sendMessage("Usage: /city newcity <name> [claim-id]");
+				return;
 			}
 			Claim claim = arguments.length >= 2 ? GriefPrevention.instance.dataStore.getClaim(Long.parseLong(arguments[1])) : null;
 			if (claim == null) {
@@ -80,12 +84,15 @@ public final class CommandHandler {
 			String result = City.newCity(arguments[0], claim);
 			if (result != null) {
 				sender.sendMessage(result);
+				return;
 			}
+			sender.sendMessage("The city has successfully been created.");
 		}});
 		
-		commands.put("deletecity", new Command() {public void run(CommandSender sender, String[] arguments, boolean confirmed) {
-			if (!(sender.hasPermission("cityclaims.admin.deletecity"))) {
+		commands.put("delete", new Command() {public void run(CommandSender sender, String[] arguments, boolean confirmed) {
+			if (!(sender.hasPermission("cityclaims.admin.delete"))) {
 				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
 			}
 			if (!confirmed) {
 				requireConfirm(sender, "deletecity", arguments);
@@ -107,10 +114,30 @@ public final class CommandHandler {
 			city.delete();				
 		}});
 		
+		commands.put("list", new Command() {public void run(CommandSender sender, String[] arguments, boolean confirmed) {
+			if (!(sender.hasPermission("cityclaims.general.list"))) {
+				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
+			}
+			boolean hidden = sender.hasPermission("cityclaims.admin.seehidden");
+			String output = "";
+			for(Map.Entry<String, City> cityEntry : City.cities.entrySet()) {
+				if (hidden || !cityEntry.getValue().flags.getFlagBoolean("hidden")) {
+					output = output + (output == "" ? "" : ", ") + cityEntry.getKey();
+				}
+			}
+			if (output == "") {
+				sender.sendMessage("There are no cities.");
+			} else {
+				sender.sendMessage("Cities: " + output);
+			}
+		}});
+		
 		commands.put("confirm", new Command() {public void run(CommandSender sender, String[] arguments,	boolean confirmed) {
 			CommandConfirmationTimeoutTask timeout = unconfirmed.get(sender.getName());
 			if(timeout == null) {
 				sender.sendMessage("You have no command awaiting confirmation!");
+				return;
 			}
 			unconfirmed.remove(sender.getName());
 			timeout.cancel();
@@ -122,6 +149,7 @@ public final class CommandHandler {
 			CommandConfirmationTimeoutTask timeout = unconfirmed.get(sender.getName());
 			if(timeout == null) {
 				sender.sendMessage("You have no command awaiting confirmation!");
+				return;
 			}
 			unconfirmed.remove(sender.getName());
 			timeout.cancel();
