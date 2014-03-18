@@ -86,10 +86,13 @@ public class City {
 	public static String newCity(String name, Claim base) {
 		City city = new City(name);
 		if (city.exists()) { // City already exists
-			return "There is already a city with that name";
+			return "There is already a city with that name.";
+		}
+		if (getCity(base) != null) {
+			return "That claim is already being used for a city.";
 		}
 		if (base.parent != null) { // Claim is a subdivision
-			return "That claim is a subdivision";
+			return "That claim is a subdivision.";
 		}
 		city.name = name;
 		city.base = base;
@@ -100,13 +103,16 @@ public class City {
 		city.id = base.getID();
 		city.treasury = 0;
 		city.save();
+		cities.put(name, city);
 		names.put(base.getID(), name);
 		saveIDFile();
 		return null;
 	}
 
 	public void delete() {
+		cities.remove(name);
 		names.remove(getID());
+		saveIDFile();
 		getFile(false).delete();
 	}
 

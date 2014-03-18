@@ -1,0 +1,38 @@
+create:
+  description: 'Creates a new city using the specified claim'
+  usage: '/city create <name> [claim-id]'
+  permissions:
+    - 'cityclaims.admin.create'
+delete:
+  description: 'Deletes the specified city'
+  usage: '/city delete <name>'
+  permissions:
+    - 'cityclaims.admin.delete'
+list:
+  description: 'Lists all cities'
+  usage: '/city list'
+  permissions:
+    - 'cityclaims.general.list'
+flags:
+  description: 'Gets or sets city flags'
+  usage: '/city flags <city> <get|set|list|remove> [flag] [value]'
+  permissions:
+    - 'cityclaims.admin.flags'
+    - 'cityclaims.admin.flags.[3]' #[3] is flag name
+    - 'cityclaims.manage.[1].flags' #[1] is city name
+    - 'cityclaims.manage.[1].flags.[3]'
+confirm:
+  description: 'Confirms certain commands'
+  usage: '/city confirm'
+  permissions:
+    - 'cityclaims.general.confirm'
+cancel:
+  description: 'Cancels the pending confirmation'
+  usage: '/city cancel'
+  permissions:
+    - 'cityclaims.general.confirm'
+help:
+  description: 'Shows help for commands'
+  usage: '/city help [page|command]'
+  permissions:
+    - 'cityclaims.general.help'

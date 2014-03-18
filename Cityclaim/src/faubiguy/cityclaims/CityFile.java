@@ -246,8 +246,15 @@ public class CityFile {
 		if (!file.isConfigurationSection("flags")) {
 			return new CityFlags();
 		}
-		return new CityFlags(file.getConfigurationSection("flags").getValues(
-				false));
+		ConfigurationSection flagSection = file.getConfigurationSection("flags");
+		Map<String,Object> flagMap = new HashMap<>();
+		for (String flag : CityFlags.listFlags(true)) {
+			if (flagSection.isSet(flag)) {
+				String type = CityFlags.FLAG_TYPES.get(flag);
+				flagMap.put(flag, type == "integer" ? flagSection.getInt(flag) : type == "double" ? flagSection.getDouble(flag) : type == "boolean" ? flagSection.getBoolean(flag) : null);
+			}
+		}
+		return new CityFlags(flagMap);
 	}
 
 	public void saveFlags(boolean saveFile) {

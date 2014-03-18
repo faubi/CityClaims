@@ -14,17 +14,27 @@ import org.bukkit.configuration.file.YamlConfiguration;
 public class CityFlags {
 
 	public static final CityFlags DEFAULTS;
+	public static final Map<String,String> FLAG_TYPES;
 	static {
-		Map<String,Object> flags = new HashMap<>();
-		flags.put("plotlimit", -1);
-		flags.put("requireempty", true);
-		flags.put("allowsell", true);
-		flags.put("sellmultiplier", 1);
-		flags.put("playersell", true);
-		flags.put("allowwarp", true);
-		flags.put("havetreasury", true);
-		flags.put("hidden", false);
-		DEFAULTS = new CityFlags(flags);
+		Map<String,Object> defaultsMap = new HashMap<>();
+		defaultsMap.put  ("plotlimit", -1);
+		defaultsMap.put("requireempty", true);
+		defaultsMap.put("allowsell", true);
+		defaultsMap.put("sellmultiplier", 1D);
+		defaultsMap.put("playersell", true);
+		defaultsMap.put("havetreasury", true);
+		defaultsMap.put("hidden", false);
+		DEFAULTS = new CityFlags(defaultsMap);
+		
+		FLAG_TYPES = new HashMap<>();
+		FLAG_TYPES.put("plotlimit", "integer");
+		FLAG_TYPES.put("requireempty", "boolean");
+		FLAG_TYPES.put("allowsell", "boolean");
+		FLAG_TYPES.put("sellmultiplier", "double");
+		FLAG_TYPES.put("playersell", "boolean");
+		FLAG_TYPES.put("havetreasury", "boolean");
+		FLAG_TYPES.put("hidden", "boolean");
+		
 	}
 
 	private Map<String, Object> flags;
@@ -38,7 +48,7 @@ public class CityFlags {
 	}
 
 	public CityFlags(int plotlimit, boolean requireempty, boolean allowsell,
-			double sellmultiplier, boolean playersell, boolean allowwarp,
+			double sellmultiplier, boolean playersell,
 			boolean havetreasury, boolean hidden) { // Construct with flags as parameters
 		flags = new HashMap<>();
 		flags.put("plotlimit", plotlimit);
@@ -46,7 +56,6 @@ public class CityFlags {
 		flags.put("allowsell", allowsell);
 		flags.put("sellmultiplier", sellmultiplier);
 		flags.put("playersell", playersell);
-		flags.put("allowwarp", allowwarp);
 		flags.put("havetreasury", havetreasury);
 		flags.put("hidden", hidden);
 	}
@@ -110,8 +119,8 @@ public class CityFlags {
 		return true;
 	}
 
-	public void removeFlag(String flag) {
-		flags.remove(flag);
+	public boolean removeFlag(String flag) {
+		return flags.remove(flag) != null;
 	}
 
 	public static void loadGlobalFlags() {
@@ -155,6 +164,34 @@ public class CityFlags {
 			}
 		}
 		return flagList;
+	}
+	
+	public static Object getFlagValueFromString(String flag, String value) {
+		String type = FLAG_TYPES.get(flag);
+		if (type == null) {
+			return null;
+		} else if (type == "integer") {
+			try {
+				return Integer.parseInt(value);
+			} catch (NumberFormatException e) {
+				return null;
+			}
+		} else if (type == "double") {
+			try {
+				return Double.parseDouble(value);
+			} catch (NumberFormatException e) {
+				return null;
+			}
+		} else if (type == "boolean") {
+			if (value.equalsIgnoreCase("true")) {
+				return true;
+			} else if (value.equalsIgnoreCase("false")) {
+				return false;
+			} else {
+				return null;
+			}
+		}
+		return null;
 	}
 
 }

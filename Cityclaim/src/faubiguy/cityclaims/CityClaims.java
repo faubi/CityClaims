@@ -58,7 +58,7 @@ public class CityClaims extends JavaPlugin {
 			String[] args) {
 		if (cmd.getName().equalsIgnoreCase("city")) {
 			if (args.length == 0) {
-				sender.sendMessage("You must specify a subcommand");
+				sender.sendMessage("§cYou must specify a subcommand. Type /city help for help.");
 				return true;
 			}
 			CommandHandler.handleCommand(sender, args[0], args.length >= 2 ? Arrays.copyOfRange(args, 1, args.length) : new String[0]);
