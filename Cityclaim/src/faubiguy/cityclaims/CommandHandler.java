@@ -759,7 +759,7 @@ public final class CommandHandler {
 					"Name: " + (plot.name != null ? plot.name : "Unnamed"),
 					"Id: " + plot.id,
 					"Owner: " + (plot.owner != null ? plot.owner : "Unowned"),
-					"Type: " + (plot.type != null ? plot.type.name : "No type"),
+					"Type: " + (plot.getType() != null ? plot.getType().name : "No type"),
 					"Size: " + plot.size.toString()
 				};
 				sender.sendMessage(plotInfo);
