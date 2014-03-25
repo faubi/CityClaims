@@ -4,8 +4,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
 
+import net.milkbowl.vault.economy.Economy;
+
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 
@@ -16,6 +19,8 @@ public class CityClaims extends JavaPlugin {
 	public File dataPath = getDataFolder();
 	public CityFlags defaults;
 	public Set<String> lockedFlags;
+	
+	public Economy economy;
 
 	public void onEnable() {
 		getLogger().info("CityClaims is loading");
@@ -29,6 +34,11 @@ public class CityClaims extends JavaPlugin {
 	}
 
 	private String initialize() {
+		RegisteredServiceProvider<Economy> economyProvider = getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
+		if (economyProvider == null) {
+			return "Unable to find a Vault-compatible economy plugin. Canceling loading CityClaims"; //Cancel loading due to error;
+		}
+		economy = economyProvider.getProvider();
 		String error = City.loadIDFile();
 		if (error != null) {
 			return error; // Cancel initialization because of error
@@ -62,6 +72,15 @@ public class CityClaims extends JavaPlugin {
 				return true;
 			}
 			CommandHandler.handleCommand(sender, args[0], args.length >= 2 ? Arrays.copyOfRange(args, 1, args.length) : new String[0]);
+			return true;
+		} else if (cmd.getName().equalsIgnoreCase("buyplot")) {
+			CommandHandler.handleCommand(sender, "plot", new String[] {"buy"});
+			return true;
+		} else if (cmd.getName().equalsIgnoreCase("sellplot")) {
+			CommandHandler.handleCommand(sender, "plot", new String[] {"sell"});
+			return true;
+		} else if (cmd.getName().equalsIgnoreCase("abandonplot")) {
+			CommandHandler.handleCommand(sender, "plot", new String[] {"abandon"});
 			return true;
 		}
 		return false;

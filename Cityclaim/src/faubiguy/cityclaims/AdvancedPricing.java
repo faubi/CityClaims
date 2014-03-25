@@ -1,5 +1,6 @@
 package faubiguy.cityclaims;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class AdvancedPricing {
@@ -70,7 +71,7 @@ public class AdvancedPricing {
 		}
 	}
 
-	private Map<Range, Double> ranges;
+	private Map<Range, Double> ranges = new HashMap<>();
 
 	public Double getPrice(int owned) {
 		for (Map.Entry<Range, Double> entry : ranges.entrySet()) {
@@ -81,28 +82,37 @@ public class AdvancedPricing {
 		return null;
 	}
 
-	public boolean addRange(Range range, double price) {
-		if (!canAddRange(range)) {
-			return false;
+	public Range addRange(Range range, double price) {
+		Range conflicting = canAddRange(range);
+		if (conflicting != null) {
+			return conflicting;
 		}
 		ranges.put(range, price);
-		return true;
+		return null;
+	}
+	
+	public boolean removeRange(Range range) {
+		return ranges.remove(range) != null;
 	}
 
-	public boolean canAddRange(Range rangeToCheck) {
+	public Range canAddRange(Range rangeToCheck) {
 		for (Range range : ranges.keySet()) {
 			if (rangeToCheck.unbounded) {
 				if (rangeToCheck.min <= range.max || range.unbounded) {
-					return false;
+					return rangeToCheck;
 				}
 			} else {
 				if (range.contains(rangeToCheck.min)
 						|| range.contains(rangeToCheck.max)) {
-					return false;
+					return rangeToCheck;
 				}
 			}
 		}
-		return true;
+		return null;
+	}
+	
+	public void removeAllRanges() {
+		ranges.clear();
 	}
 
 	public Map<Range, Double> getRanges() {

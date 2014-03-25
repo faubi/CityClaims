@@ -8,8 +8,10 @@ import java.util.Map;
 import java.util.Set;
 
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
 import me.ryanhamshire.GriefPrevention.Claim;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
@@ -96,12 +98,29 @@ public class City {
 		}
 		city.name = name;
 		city.base = base;
-		city.flags = new CityFlags();
+		city.flags = new CityFlags(city);
 		city.types = new HashSet<>();
 		city.plots = new HashMap<>();
 		city.sizeTypes = new HashMap<>();
 		city.id = base.getID();
 		city.treasury = 0;
+		
+		int plotId = 0;
+		for(Claim plotClaim : base.children) {
+			Plot plot = new Plot(plotClaim);
+			//CityClaims.instance.getLogger().info("Found Plot: " + plot.getCornerString());
+			plot.surfaceLevel = 255;
+			Location plotCorner = plotClaim.getLesserBoundaryCorner().clone();
+			for (;plot.surfaceLevel>=0;plot.surfaceLevel--) {
+				plotCorner.setY(plot.surfaceLevel);
+				if (!plotCorner.getBlock().isEmpty()) {
+					break;
+				}
+			}
+			plot.id = plotId;
+			city.plots.put(plot.id, plot);
+			plotId++;
+		}
 		city.save();
 		cities.put(name, city);
 		names.put(base.getID(), name);
@@ -122,7 +141,7 @@ public class City {
 
 	public Plot getPlot(String name) {
 		for (Plot plot : plots.values()) {
-			if (plot.name == name) {
+			if (plot.name != null && plot.name.equals(name)) {
 				return plot;
 			}
 		}
@@ -135,7 +154,7 @@ public class City {
 
 	public PlotType getType(String name) {
 		for (PlotType type : types) {
-			if (type.name == name) {
+			if (type.name.equals(name)) {
 				return type;
 			}
 		}
@@ -162,21 +181,33 @@ public class City {
 	}
 
 	public void addType(PlotType type) {
+		types.remove(getType(type.name));
 		if (types.add(type)) {
 			getFile().saveType(type, true);
 		}
 	}
 
-	public void removeType(PlotType type) {
+	public boolean removeType(PlotType type) {
 		if (types.remove(type)) {
 			getFile().saveTypes(true);
+			return true;
 		}
+		return false;
 	}
 
-	public void removeType(String name) {
+	public boolean removeType(String name) {
 		PlotType type = getType(name);
 		if (type != null) {
 			removeType(type);
+			return true;
+		}
+		return false;
+	}
+	
+	public void saveType(PlotType type) {
+		PlotType typeInSet = getType(type.name);
+		if (typeInSet != null && typeInSet.equals(type)) {
+			getFile().saveType(type, true);
 		}
 	}
 
@@ -189,22 +220,16 @@ public class City {
 		addSizeType(size, type.name);
 	}
 
-	public void removeSizeType(PlotSize size) {
+	public boolean removeSizeType(PlotSize size) {
 		if (sizeTypes.remove(size) != null) {
 			getFile().saveSizeTypes(true);
+			return true;
 		}
+		return false;
 	}
 
-	public String setFlag(String flag, Object value, boolean overrideLock) {
-		if (!flags.setFlag(flag, value, overrideLock)) {
-			return "That flag has been globally locked";
-		}
+	public void saveFlags() {
 		getFile().saveFlags(true);
-		return null;
-	}
-
-	public String setFlag(String flag, Object value) {
-		return setFlag(flag, value, false);
 	}
 
 	public void removeFlag(String flag) {
@@ -217,6 +242,34 @@ public class City {
 		names.put(getID(), newName);
 		saveIDFile();
 		getFile().rename(newName);
+	}
+	
+	public Location getLocation() {
+		return base.getLesserBoundaryCorner().toVector().getMidpoint(base.getGreaterBoundaryCorner().toVector()).toLocation(getWorld());
+	}
+	
+	public void saveTreasury() {
+		getFile().saveTreasury(true);
+	}
+	
+	public World getWorld() {
+		return base.getLesserBoundaryCorner().getWorld();
+	}
+	
+	public int getOwnedPlots(Player player, PlotType type) {
+		int owned = 0;
+		for (Plot plot : plots.values()) {
+			if (plot.owner != null && plot.owner.equals(player.getName()) && (type == null || type.equals(plot.type))) {
+				owned++;
+			}
+		}
+		return owned;
+	}
+	
+	public boolean reachedLimit(Player player, PlotType type) {
+		int owned = getOwnedPlots(player, type);
+		int limit = (type == null ? flags.getFlagInt("plotlimit") : type.flags.getFlagInt("limit"));
+		return limit >= 0 && limit <= owned;		
 	}
 
 	public static String loadIDFile() {
@@ -253,6 +306,25 @@ public class City {
 			return false;
 		}
 		return true;
+	}
+	
+	public Flags getFlags() {
+		if (flags == null) {
+			flags = new CityFlags(this);
+		}
+		return flags;
+	}
+
+	public Plot getPlot(Location loc) {
+		for (Plot plot : plots.values()) {
+			CityClaims.instance.getLogger().info("Checking plot: " + plot.id);
+			if (plot.base.contains(loc, true, false)) {
+				CityClaims.instance.getLogger().info("Plot found");
+				return plot;
+			}
+		}
+		CityClaims.instance.getLogger().info("No plot containing location");
+		return null;
 	}
 
 }

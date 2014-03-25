@@ -9,8 +9,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import me.ryanhamshire.GriefPrevention.Claim;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
 
+import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -90,27 +92,25 @@ public class CityFile {
 		return true;
 	}
 
-	public Plot loadPlot(long id) {
-		;
-		if (!file.isConfigurationSection("plots." + Long.toString(id))) {
-			return null;
-		}
-		ConfigurationSection section = file.getConfigurationSection("plots."
-				+ Long.toString(id));
-		Plot plot = new Plot();
+	public Plot loadPlot(Claim plotClaim) {
+		Plot plot = new Plot(plotClaim);
 		plot.parent = city;
-		plot.base = city.base.children.get((int) id);
-		plot.owner = section.getString("owner");
-		plot.name = section.getString("name");
-		plot.type = city.getType(section.getString("type"));
-		plot.size = PlotSize.fromString(section.getString("size"));
-		if (section.isConfigurationSection("sale")) {
-			try {
-				plot.sale = new Plot.Sale(section.getDouble("sale.price", 0),
-						new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-								.parse(section.getString("sale.expires", "")));
-			} catch (ParseException e) {
-				return null;
+		Location loc = plotClaim.getLesserBoundaryCorner();
+		plot.size = new PlotSize(plotClaim.getWidth(), plotClaim.getHeight());
+		if (file.isConfigurationSection("plots." + Plot.getStringFromLocation(loc))) {
+			ConfigurationSection section = file.getConfigurationSection("plots." + Plot.getStringFromLocation(loc));
+			plot.owner = section.getString("owner");
+			plot.name = section.getString("name");
+			plot.type = city.getType(section.getString("type"));
+			plot.id = section.getLong("id");
+			if (section.isConfigurationSection("sale")) {
+				try {
+					plot.sale = new Plot.Sale(section.getDouble("sale.price", 0),
+							new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+									.parse(section.getString("sale.expires", "")));
+				} catch (ParseException e) {
+					return null;
+				}
 			}
 		}
 		return plot;
@@ -118,33 +118,28 @@ public class CityFile {
 
 	public Map<Long, Plot> loadPlots() throws CityLoadingException {
 		Map<Long, Plot> plots = new HashMap<>();
-		if(file.isConfigurationSection("plots")) {		
-			for (String key : file.getConfigurationSection("plots").getKeys(false)) {
-				long id;
-				try {
-					id = Long.parseLong(key);
-				} catch (NumberFormatException e) {
-					throw new CityLoadingException("Unreadable plot id: " + key,
-							city.name);
-				}
-				Plot plot = loadPlot(id);
-				if (plot == null) {
-					throw new CityLoadingException("Unable to load plot: " + id,
-							city.name);
-				}
-				plots.put(id, loadPlot(id));
+		if(!file.isConfigurationSection("plots")) {
+			file.createSection("plots");
+		}
+		for (Claim plotClaim : city.base.children) {
+			Plot plot = loadPlot(plotClaim);
+			if (plot == null) {
+				throw new CityLoadingException("Unable to load plot: " + Plot.getStringFromLocation(plotClaim.getLesserBoundaryCorner()), city.name);
 			}
+			plots.put(plot.id, plot);
 		}
 		return plots;
 	}
 
 	public boolean savePlot(Plot plot, boolean saveFile) {
 		ConfigurationSection section = file.createSection("plots."
-				+ plot.getID());
+				+ plot.getCornerString());
 		section.set("owner", plot.owner);
 		section.set("name", plot.name);
+		section.set("id", plot.id);
 		section.set("type", plot.type == null ? null : plot.type.name);
 		section.set("size", plot.size.toString());
+		section.set("surface_level", plot.surfaceLevel);
 		if (plot.sale != null) {
 			section = section.createSection("sale");
 			section.set("price", plot.sale.price);
@@ -174,9 +169,9 @@ public class CityFile {
 		}
 		ConfigurationSection typeSection = file
 				.getConfigurationSection("types." + name);
-		PlotType type = new PlotType();
-		type.price = typeSection.getDouble("price", 0);
-		type.limit = typeSection.getInt("limit", -1);
+		PlotType type = new PlotType(city, name);
+		type.flags.setFlag("price", typeSection.getDouble("price", 0));
+		type.flags.setFlag("limit", typeSection.getInt("limit", -1));
 		if (typeSection.isConfigurationSection("advanced_pricing")) {
 			AdvancedPricing advancedPricing = new AdvancedPricing();
 			ConfigurationSection advancedPricingSection = typeSection
@@ -214,8 +209,8 @@ public class CityFile {
 	public void saveType(PlotType type, boolean saveFile) {
 		ConfigurationSection typeSection = file.createSection("types."
 				+ type.name);
-		typeSection.set("price", type.price);
-		typeSection.set("limit", type.limit);
+		typeSection.set("price", type.getPrice());
+		typeSection.set("limit", type.flags.getFlagInt("limit"));
 		if (type.advancedPricing != null) {
 			ConfigurationSection advancedPricingSection = typeSection
 					.createSection("advanced_pricing");
@@ -244,17 +239,17 @@ public class CityFile {
 
 	public CityFlags loadFlags() {
 		if (!file.isConfigurationSection("flags")) {
-			return new CityFlags();
+			return new CityFlags(city);
 		}
 		ConfigurationSection flagSection = file.getConfigurationSection("flags");
 		Map<String,Object> flagMap = new HashMap<>();
-		for (String flag : CityFlags.listFlags(true)) {
+		for (String flag : CityFlags.DEFAULTS.listFlags(true)) {
 			if (flagSection.isSet(flag)) {
 				String type = CityFlags.FLAG_TYPES.get(flag);
 				flagMap.put(flag, type == "integer" ? flagSection.getInt(flag) : type == "double" ? flagSection.getDouble(flag) : type == "boolean" ? flagSection.getBoolean(flag) : null);
 			}
 		}
-		return new CityFlags(flagMap);
+		return new CityFlags(city, flagMap);
 	}
 
 	public void saveFlags(boolean saveFile) {
@@ -313,8 +308,8 @@ public class CityFile {
 			throw new CityLoadingException(
 					"Claim associated with city does not exist", city.name);
 		}
-		city.plots = loadPlots();
 		city.types = loadTypes();
+		city.plots = loadPlots();
 		city.flags = loadFlags();
 		city.treasury = loadTreasury();
 		city.sizeTypes = loadSizeTypes();

@@ -11,10 +11,13 @@ import java.util.Map;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-public class CityFlags {
+public class CityFlags extends Flags {
 
 	public static final CityFlags DEFAULTS;
 	public static final Map<String,String> FLAG_TYPES;
+	
+	public final City city;
+	
 	static {
 		Map<String,Object> defaultsMap = new HashMap<>();
 		defaultsMap.put  ("plotlimit", -1);
@@ -24,7 +27,7 @@ public class CityFlags {
 		defaultsMap.put("playersell", true);
 		defaultsMap.put("havetreasury", true);
 		defaultsMap.put("hidden", false);
-		DEFAULTS = new CityFlags(defaultsMap);
+		DEFAULTS = new CityFlags(null, defaultsMap);
 		
 		FLAG_TYPES = new HashMap<>();
 		FLAG_TYPES.put("plotlimit", "integer");
@@ -36,76 +39,61 @@ public class CityFlags {
 		FLAG_TYPES.put("hidden", "boolean");
 		
 	}
+	
+	public Map<String,String> getFlagTypes() {
+		return FLAG_TYPES;
+	}
 
-	private Map<String, Object> flags;
-
-	public CityFlags(Map<String, Object> map) { // Construct from Map of flags
+	public CityFlags(City city, Map<String, Object> map) { // Construct from Map of flags
+		super(FLAG_TYPES);
+		this.city = city; 
 		flags = map;
 	}
 
-	public CityFlags() { // Construct without any flags
+	public CityFlags(City city) { // Construct without any flags
+		super(FLAG_TYPES);
+		this.city = city;
 		flags = new HashMap<>();
 	}
-
-	public CityFlags(int plotlimit, boolean requireempty, boolean allowsell,
-			double sellmultiplier, boolean playersell,
-			boolean havetreasury, boolean hidden) { // Construct with flags as parameters
-		flags = new HashMap<>();
-		flags.put("plotlimit", plotlimit);
-		flags.put("requireempty", requireempty);
-		flags.put("allowsell", allowsell);
-		flags.put("sellmultiplier", sellmultiplier);
-		flags.put("playersell", playersell);
-		flags.put("havetreasury", havetreasury);
-		flags.put("hidden", hidden);
+	
+	public boolean hasCity() {
+		return city != null;
 	}
-
-	public Map<String, Object> getMap() {
-		return flags;
+	
+	public List<String> listFlags(boolean includeLocked) {
+		List<String> flagList = new ArrayList<String>();
+		for (String flag : getFlagTypes().keySet()) {
+			if (includeLocked || !CityClaims.instance.lockedFlags.contains(flag)) {
+				flagList.add(flag);
+			}
+		}
+		return flagList;
 	}
-
+	
 	public Object getFlag(String flag) {
 		return getFlag(flag, true);
 	}
 
-	public Object getFlag(String flag, boolean inherit) {
+	public Object getFlag(String flag, boolean inherit) {		
+		//CityClaims.instance.getLogger().info("Getting flag: " + flag);
 		Object value = flags.get(flag);
 		if (!inherit) {
+			//CityClaims.instance.getLogger().info("Inherit is false");
+			//CityClaims.instance.getLogger().info("Returning " + (value != null ? value.toString() : "null"));
 			return value;
 		}
 		if (value == null) {
+			//CityClaims.instance.getLogger().info("Checking server default");
 			value = CityClaims.instance.defaults.getFlag(flag, false);
 			if (value == null) {
+				//CityClaims.instance.getLogger().info("Checking plugin default");
 				value = CityFlags.DEFAULTS.getFlag(flag, false);
 			}
 		}
+		//CityClaims.instance.getLogger().info("Returning (inherited)" + value.toString());
 		return value;
 	}
 	
-	public Boolean getFlagBoolean(String flag) {
-		Object value = getFlag(flag);
-		if (value instanceof Boolean) {
-			return (Boolean)value;
-		}
-		return null;
-	}
-	
-	public Double getFlagDouble(String flag) {
-		Object value = getFlag(flag);
-		if (value instanceof Double) {
-			return (Double)value;
-		}
-		return null;
-	}
-	
-	public Integer getFlagInt(String flag) {
-		Object value = getFlag(flag);
-		if (value instanceof Integer) {
-			return (Integer)value;
-		}
-		return null;
-	}
-
 	public boolean setFlag(String flag, Object value) {
 		return setFlag(flag, value, false);
 	}
@@ -118,20 +106,16 @@ public class CityFlags {
 		flags.put(flag, value);
 		return true;
 	}
-
-	public boolean removeFlag(String flag) {
-		return flags.remove(flag) != null;
-	}
-
+	
 	public static void loadGlobalFlags() {
 		FileConfiguration flagFile = YamlConfiguration
 				.loadConfiguration(new File(CityClaims.instance.dataPath,
 						"flags.yml"));
 		if(flagFile.isConfigurationSection("flags")) {
-			CityClaims.instance.defaults = new CityFlags(flagFile
+			CityClaims.instance.defaults = new CityFlags(null, flagFile
 					.getConfigurationSection("flags").getValues(false));
 		} else {
-			CityClaims.instance.defaults = new CityFlags();
+			CityClaims.instance.defaults = new CityFlags(null);
 		}
 		if (flagFile.isConfigurationSection("locked")) {
 			CityClaims.instance.lockedFlags = new HashSet<String>(flagFile
@@ -155,43 +139,11 @@ public class CityFlags {
 		}
 		return true;
 	}
-	
-	public static List<String> listFlags(boolean includeLocked) {
-		List<String> flagList = new ArrayList<String>();
-		for (String flag : DEFAULTS.getMap().keySet()) {
-			if (includeLocked || !CityClaims.instance.lockedFlags.contains(flag)) {
-				flagList.add(flag);
-			}
-		}
-		return flagList;
-	}
-	
-	public static Object getFlagValueFromString(String flag, String value) {
-		String type = FLAG_TYPES.get(flag);
-		if (type == null) {
-			return null;
-		} else if (type == "integer") {
-			try {
-				return Integer.parseInt(value);
-			} catch (NumberFormatException e) {
-				return null;
-			}
-		} else if (type == "double") {
-			try {
-				return Double.parseDouble(value);
-			} catch (NumberFormatException e) {
-				return null;
-			}
-		} else if (type == "boolean") {
-			if (value.equalsIgnoreCase("true")) {
-				return true;
-			} else if (value.equalsIgnoreCase("false")) {
-				return false;
-			} else {
-				return null;
-			}
-		}
-		return null;
+
+	@Override
+	public void save() {
+		city.saveFlags();
+		
 	}
 
 }

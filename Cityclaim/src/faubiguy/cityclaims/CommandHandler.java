@@ -1,6 +1,7 @@
 package faubiguy.cityclaims;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -12,17 +13,21 @@ import java.util.regex.Pattern;
 
 import me.ryanhamshire.GriefPrevention.Claim;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
+import net.milkbowl.vault.economy.Economy;
 
+import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.permissions.Permissible;
+import org.bukkit.permissions.PermissionAttachmentInfo;
 
 public final class CommandHandler {
 	
 	public static Map<String,Command> commands;
 	public static Map<String,CommandConfirmationTimeoutTask> unconfirmed; //Map from sender's username to unconfirmed command name
+	public static Economy eco;
 	
 	public static final String NO_PERMISSION_MESSAGE = "§cYou do not have permission to do this."; 
 	
@@ -33,8 +38,9 @@ public final class CommandHandler {
 		public String description; //Description returned when useing /city help.		
 		public String name; //Name of the command.
 		public String usage; //Usage string shown on incorect usage
+		public List<String> subusages;
 		
-		private Pattern permissionSubstitutionPattern = Pattern.compile("\\[[0-9]+\\]");
+		private static final Pattern permissionSubstitutionPattern = Pattern.compile("\\[[0-9]+\\]");
 		
 		public boolean checkPermission(CommandSender sender, String[] arguments) {
 			if (sender.isOp()) {
@@ -43,6 +49,7 @@ public final class CommandHandler {
 			for (String permission : permissions) {
 				Matcher m = permissionSubstitutionPattern.matcher(permission);
 				boolean skip = false;
+				boolean subnode = arguments == null;
 				while (m.find()) {
 					String match = m.group();
 					int value = Integer.parseInt(match.substring(1, match.length() - 1));
@@ -50,13 +57,13 @@ public final class CommandHandler {
 						skip = true;
 						break;
 					}
-					permission = permission.substring(0,m.start()) + (arguments != null ? arguments[value-1] : "*") + permission.substring(m.end(), permission.length());
+					permission = permission.substring(0,m.start()) + (subnode ? "*" : arguments[value-1]) + permission.substring(m.end(), permission.length());
 					m.reset(permission);
 				}
 				if (skip) {
 					continue;
 				}
-				if (sender.hasPermission(permission)) {
+				if (checkPermissionWithWildcard(sender, permission, subnode)) {
 					return true;
 				}
 			}
@@ -64,39 +71,71 @@ public final class CommandHandler {
 		}
 		
 		public void sendUsage(CommandSender sender) {
-			sender.sendMessage("Usage: " + usage);
+			sender.sendMessage("§cUsage: " + usage);
 		}
-	}
-	
-	private static void requireConfirm(CommandSender sender, String commandName, String[] arguments) {
-		CommandConfirmationTimeoutTask timeout = new CommandConfirmationTimeoutTask(sender, commandName, arguments);
-		timeout.runTaskLater(CityClaims.instance, 300); //Wait for 15 seconds
-		if (unconfirmed.put(sender.getName(), timeout) != null) {//If there was already an unconfirmed command
-			sender.sendMessage("The previous command waiting for confimation has been cancelled");
-		}
-		sender.sendMessage("Type '/city confirm' within 15 seconds to confirm this command. Type /city cancel to cancel it");
-	}
-			
-	public static class CommandConfirmationTimeoutTask extends BukkitRunnable {
-		public String commandName;
-		public CommandSender sender;
-		public String[] arguments;
 		
-		public CommandConfirmationTimeoutTask(CommandSender sender, String commandName, String[] arguments) {
-			this.commandName = commandName;
-			this.sender = sender;
-			this.arguments = arguments;
-		}
-
-		@Override
-		public void run() {
-			if(unconfirmed.remove(sender.getName()) != null) {
-				sender.sendMessage("Confirmation for the command '/city " + commandName + "' has timed out.");
+		protected void requireConfirm(CommandSender sender, String[] arguments) {
+			CommandConfirmationTimeoutTask timeout = new CommandConfirmationTimeoutTask(sender, name, arguments);
+			timeout.runTaskLater(CityClaims.instance, 300); //Wait for 15 seconds
+			if (unconfirmed.put(sender.getName(), timeout) != null) {//If there was already an unconfirmed command
+				sender.sendMessage("The previous command waiting for confimation has been cancelled");
 			}
-			
+			sender.sendMessage("Type '/city confirm' within 15 seconds to confirm this command. Type /city cancel to cancel it");
 		}
+		
+		public void init() {}
+		
 	}
 	
+	public static boolean checkPermissionWithWildcard(Permissible p, String permission, boolean subnode) {
+		//CityClaims.instance.getLogger().info("Subnode = " + Boolean.toString(subnode));
+		//CityClaims.instance.getLogger().info("Checking " + permission);
+		if (subnode ? checkPermissionAnySubnode(p, permission, true) : p.hasPermission(permission)) {
+			//CityClaims.instance.getLogger().info("Found");
+			return true;
+		}
+		//CityClaims.instance.getLogger().info("Not found");
+		String[] nodes = permission.split("\\.");
+		permission = "";
+		for(int i=0;i<nodes.length-1;i++) {
+			permission = permission + nodes[i] + ".*";
+			//CityClaims.instance.getLogger().info("Checking " + permission);
+			if (subnode ? checkPermissionAnySubnode(p, permission, false) : p.hasPermission(permission)) {
+				//CityClaims.instance.getLogger().info("Found");
+				return true;
+			}
+			//CityClaims.instance.getLogger().info("Not found");
+			permission = permission.substring(0, permission.length() - 1);
+		}
+		return false;
+	}
+	
+	//
+	private static boolean checkPermissionAnySubnode(Permissible p, String permission, boolean replaceLast) {
+		//CityClaims.instance.getLogger().info("AnySubnode: replaceLast = " + Boolean.toString(replaceLast));
+		permission = Pattern.quote(permission);
+		String permRegex;
+		if (replaceLast) {
+			permRegex = permission.replace("*", "[-\\.]+");
+		} else {
+			int lastIndex = permission.lastIndexOf('*');
+			lastIndex = lastIndex > 0 ? lastIndex : permission.length();
+			permRegex = permission.substring(0,lastIndex).replace("*", "[-\\.]+") + permission.substring(lastIndex, permission.length());
+		}
+		Pattern pattern = Pattern.compile(permRegex);
+		//CityClaims.instance.getLogger().info("AnySubnode: Pattern = " + pattern.toString());
+		Matcher m;
+		for(PermissionAttachmentInfo permInfo : p.getEffectivePermissions()) {
+			m = pattern.matcher(permInfo.getPermission());
+			if (m.find()) {
+				//CityClaims.instance.getLogger().info("AnySubnode: Permission found: " + m.group());
+				return true;
+			}
+		}
+		//CityClaims.instance.getLogger().info("AnySubnode: Permission not found");
+		return false;
+	}
+			
 	static void handleCommand(CommandSender sender, String commandName, String[] arguments) {
 		Command command = commands.get(commandName);
 		if (command == null) {
@@ -135,12 +174,12 @@ public final class CommandHandler {
 		}});
 		
 		addCommand("delete", new Command() {public void run(CommandSender sender, String[] arguments, boolean confirmed) {
-			if (!(sender.hasPermission("cityclaims.admin.delete"))) {
+			if (!(checkPermission(sender, arguments))) {
 				sender.sendMessage(NO_PERMISSION_MESSAGE);
 				return;
 			}
 			if (!confirmed) {
-				requireConfirm(sender, "delete", arguments);
+				requireConfirm(sender, arguments);
 				return;
 			}
 			City city;
@@ -161,7 +200,7 @@ public final class CommandHandler {
 		}});
 		
 		addCommand("list", new Command() {public void run(CommandSender sender, String[] arguments, boolean confirmed) {
-			if (!(sender.hasPermission("cityclaims.general.list"))) {
+			if (!checkPermission(sender, arguments)) {
 				sender.sendMessage(NO_PERMISSION_MESSAGE);
 				return;
 			}
@@ -180,20 +219,669 @@ public final class CommandHandler {
 		}});
 		
 		addCommand("flags", new Command() {public void run(CommandSender sender, String[] arguments, boolean confirmed) {
+			if (arguments.length < 2) {
+				sendUsage(sender);
+				return;
+			}
 			if (!checkPermission(sender, arguments)) {
 				sender.sendMessage(NO_PERMISSION_MESSAGE);
 				return;
-			}
-			if (arguments.length < 2) {
-				sendUsage(sender);
 			}
 			City city = City.getCity(arguments[0]);
 			if (city == null) {
 				sender.sendMessage("§cThere is no city with that name");
 				return;
 			}
-			flagCommand(sender, city, arguments[1], arguments.length >=3 ? arguments[2] : null, arguments.length >= 4 ? arguments[3] : null);
+			flagCommand(sender, city.flags, arguments[1], arguments.length >=3 ? arguments[2] : null, arguments.length >= 4 ? arguments[3] : null);
 		}});
+		
+		addCommand("globalflags", new Command() {public void run(CommandSender sender, String[] arguments, boolean confirmed) {
+			if (!checkPermission(sender, arguments)) {
+				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
+			}
+			if (arguments.length < 1) {
+				sendUsage(sender);
+				return;
+			}
+			flagCommand(sender, CityClaims.instance.defaults, arguments[0], arguments.length >=2 ? arguments[1] : null, arguments.length >= 3 ? arguments[2] : null);
+		}});
+		
+		addCommand("type", new Command() {public void run(CommandSender sender, String[] arguments, boolean confirmed) {
+			if (!checkPermission(sender, arguments)) {
+				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
+			}
+			if (arguments.length < 2) {
+				sendUsage(sender);
+				return;
+			}
+			City city = City.getCity(arguments[0]);
+			if (city == null) {
+				sender.sendMessage("§cThere is no city with that name");
+				return;
+			}
+			String mode = arguments[1];
+			arguments = Arrays.copyOfRange(arguments, 2, 6);
+			if (mode.equalsIgnoreCase("add")) {
+				if (arguments[0] == null) {
+					sender.sendMessage("§cYou must specify a name for the new type");
+				}
+				double price = 0;
+				if (arguments[1] != null) {
+					try {
+						price = Double.parseDouble(arguments[1]);
+					} catch (NumberFormatException e) {
+						sender.sendMessage("§c" + arguments[1] + "is not a valid number.");
+						return;
+					}
+				}
+				int limit = -1;
+				if (arguments[2] != null) {
+					try {
+						price = Integer.parseInt(arguments[1]);
+					} catch (NumberFormatException e) {
+						sender.sendMessage("§c" + arguments[1] + "is not a valid integer.");
+						return;
+					}
+				}
+				if (city.getType(arguments[0]) != null) {
+					sender.sendMessage("§There is already a type with that name.");
+					return;
+				}
+				city.addType(new PlotType(city, arguments[0], price, limit));
+				sender.sendMessage("Type " + arguments[0] + " added successfully.");
+			} else if (mode.equalsIgnoreCase("remove")) {
+				if (arguments[0] == null) {
+					sender.sendMessage("§cYou must specify the type to delete.");
+					return;
+				}
+				if (city.removeType(arguments[0])) {
+					sender.sendMessage("Type " + arguments[0] + " has been deleted successfully.");
+				} else {
+					sender.sendMessage("§cNo type exists with that name");
+				}
+			} else if (mode.equalsIgnoreCase("flags")) {
+				if (arguments[0] == null) {
+					sender.sendMessage("§cYou must specify a type.");
+					return;
+				}
+				if (arguments[1] == null) {
+					sender.sendMessage("§cYou must specify a mode (get, set, or list).");
+					return;
+				}
+				PlotType type = city.getType(arguments[0]);
+				if (type == null) {
+					sender.sendMessage("§cThere is no type with that name.");
+					return;
+				}
+				if (!arguments[1].equals("get") && !arguments[1].equals("set") && !arguments[1].equals("list")) {
+					sender.sendMessage("§cInvalid flag mode: " + arguments[1]);
+				}
+				flagCommand(sender, type.flags, arguments[1], arguments[2], arguments[3]);
+			} else if (mode.equalsIgnoreCase("list")) {
+				String typesList = "";
+				for (PlotType type : city.types) {
+					typesList += (typesList.equals("") ? "" : ", ") + type.name;
+				}
+				sender.sendMessage("Types: " + typesList);
+			} else if (mode.equalsIgnoreCase("advancedpricing")) {
+				if (arguments[0] == null) {
+					sender.sendMessage("§cYou must specify a type.");
+					return;
+				}
+				if (arguments[1] == null) {
+					sender.sendMessage("§cYou must specify a mode (get, set, unset, list, or reset).");
+					return;
+				}
+				PlotType type = city.getType(arguments[0]);
+				if (type == null) {
+					sender.sendMessage("§cThere is no type with that name.");
+					return;
+				}
+				if (arguments[1].equalsIgnoreCase("set")) {
+					if (arguments[2] == null) {
+						sender.sendMessage("§cYou must specify a range or value. Examples: 2-4, 6, 3+");
+						return;
+					}
+					if (arguments[3] == null) {
+						sender.sendMessage("§cYou must specify a price.");
+						return;
+					}
+					AdvancedPricing.Range range = AdvancedPricing.Range.fromString(arguments[2]);
+					if (range == null) {
+						sender.sendMessage("§cUnable to read range: " + arguments[2]);
+						return;
+					}
+					double price;
+					try {
+						price = Double.parseDouble(arguments[3]);
+					} catch (NumberFormatException e) {
+						sender.sendMessage("Invalid number: " + arguments[3]);
+						return;
+					}
+					AdvancedPricing.Range conflicting = type.advancedPricing.addRange(range, price);
+					if(conflicting == null) {
+						sender.sendMessage("Price for range " + arguments[2] + " set to " + Double.toString(price));
+						type.save();
+					} else {
+						sender.sendMessage("§cCan't set range due to conflict with existing range: " + conflicting.toString());
+					}
+				} else if (arguments[1].equalsIgnoreCase("get")) {
+					if (arguments[2] == null) {
+						sender.sendMessage("§cYou must specify a range or value. Examples: 2-4, 6, 3+");
+						return;
+					}
+					AdvancedPricing.Range range = AdvancedPricing.Range.fromString(arguments[2]);
+					if (range == null) {
+						sender.sendMessage("§cUnable to read range: " + arguments[2]);
+						return;
+					}
+					Double price = type.advancedPricing.getRanges().get(range);
+					if (price == null) {
+						sender.sendMessage("There is no price set for range " + range.toString());
+					} else {
+						sender.sendMessage("Price for range " + range.toString() + ": " + price.toString());
+					}
+				} else if (arguments[1].equalsIgnoreCase("unset")) {
+					if (arguments[2] == null) {
+						sender.sendMessage("§cYou must specify a range or value. Examples: 2-4, 6, 3+");
+						return;
+					}
+					AdvancedPricing.Range range = AdvancedPricing.Range.fromString(arguments[2]);
+					if (range == null) {
+						sender.sendMessage("§cUnable to read range: " + arguments[2]);
+						return;
+					}
+					type.advancedPricing.removeRange(range);
+					sender.sendMessage("Range " + range.toString() + " no longer has a price set");
+					type.save();
+				} else if (arguments[1].equalsIgnoreCase("reset")) {
+					type.advancedPricing.removeAllRanges();
+					type.save();
+				} else if (arguments[1].equalsIgnoreCase("list")) {
+					String rangesString = "";
+					for (AdvancedPricing.Range range : type.advancedPricing.getRanges().keySet()) {
+						rangesString += (rangesString.equals("") ? "" : ", ") + range.toString();
+					}
+					sender.sendMessage("Ranges with price set: " + rangesString);
+				} else {
+					sender.sendMessage("§cInvalid advancedpricing mode: " + arguments[1]);
+				}
+			} else {
+				sender.sendMessage("Invalid subcommand: " + mode);
+			}
+		}});
+		
+		addCommand("sizetype", new Command() {public void run(CommandSender sender, String[] arguments,	boolean confirmed) {
+			if (!checkPermission(sender, arguments)) {
+				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
+			}
+			if (arguments.length < 2) {
+				sendUsage(sender);
+				return;
+			}
+			City city = City.getCity(arguments[0]);
+			if (city == null) {
+				sender.sendMessage("§cThere is no city with that name");
+				return;
+			}
+			String mode = arguments[1];
+			arguments = Arrays.copyOfRange(arguments, 2, 4);
+			if (mode.equalsIgnoreCase("set")) {
+				if (arguments[0] == null) {
+					sender.sendMessage("§cYou must specify a size. Example: 16x16");
+					return;
+				}
+				if (arguments[1] == null) {
+					sender.sendMessage("§cYou must specify a type.");
+					return;
+				}
+				PlotSize size = PlotSize.fromString(arguments[0]);
+				if (size == null) {
+					sender.sendMessage("Invalid plot size: " + arguments[0]);
+					return;
+				}
+				PlotType type = city.getType(arguments[1]);
+				if (type == null) {
+					sender.sendMessage("§cNo type exists with name: " + arguments[1]);
+					return;
+				}
+				city.addSizeType(size, type);
+				sender.sendMessage("Type for size " + arguments[0] + " successfully set to " + arguments[1]);
+			} else if (mode.equalsIgnoreCase("get")) {
+				if (arguments[0] == null) {
+					sender.sendMessage("§cYou must specify a size. Example: 16x16");
+					return;
+				}
+				PlotSize size = PlotSize.fromString(arguments[0]);
+				if (size == null) {
+					sender.sendMessage("Invalid plot size: " + arguments[0]);
+					return;
+				}
+				PlotType type = city.getType(size);
+				if (type == null) {
+					sender.sendMessage("§cNo type is set for that size.");
+					return;
+				}
+				sender.sendMessage("Type for " + size.toString() + ": " + type.name);
+			} else if (mode.equalsIgnoreCase("unset")) {
+				if (arguments[0] == null) {
+					sender.sendMessage("§cYou must specify a size. Example: 16x16");
+					return;
+				}
+				PlotSize size = PlotSize.fromString(arguments[0]);
+				if (size == null) {
+					sender.sendMessage("Invalid plot size: " + arguments[0]);
+					return;
+				}
+				if(city.removeSizeType(size)) {
+					sender.sendMessage("Successfully removed type from size " + arguments[0]);
+				} else {
+					sender.sendMessage("§cNo type is set for that size");
+				}
+			} else if (mode.equalsIgnoreCase("list")) {
+				String sizesString = "";
+				for (PlotSize size : city.sizeTypes.keySet()) {
+					sizesString += (sizesString.equals("") ? "" : ", ") + size.toString();
+				}
+				sender.sendMessage("Sizes with type set: " + sizesString);
+			}
+		}});
+		
+		addCommand("treasury", new Command() {public void run(CommandSender sender, String[] arguments,	boolean confirmed) {
+			if (!(sender instanceof Player)) {
+				sender.sendMessage("§cThis command must be run by a player");
+				return;
+			}
+			if (!checkPermission(sender, arguments)) {
+				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
+			}
+			if (arguments.length < 2) {
+				sendUsage(sender);
+				return;
+			}
+			City city = City.getCity(arguments[0]);
+			if (city == null) {
+				sender.sendMessage("§cThere is no city with that name");
+				return;
+			}
+			if (arguments[1].equalsIgnoreCase("balance")) {
+				sender.sendMessage("Treasury balance: " + Double.toString(city.treasury));
+			} else if (arguments[1].equalsIgnoreCase("withdraw")) {
+				if (arguments[2] == null) {
+					sender.sendMessage("§cYou must specify an amount to withdraw.");
+					return;
+				}
+				double amount;
+				try {
+					amount = Double.parseDouble(arguments[2]); 
+				} catch (NumberFormatException e) {
+					sender.sendMessage("§cInvalid number: " + arguments[2]);
+					return;
+				}
+				if (amount <= 0) {
+					sender.sendMessage("§cAmount to withdraw must be positive.");
+					return;
+				}
+				if (amount > city.treasury) {
+					sender.sendMessage("§cThe treasury doesn't contain that much.");
+					return;
+				}
+				city.treasury -= amount;
+				CityClaims.instance.economy.depositPlayer(((Player)sender).getName(), city.getWorld().getName(), amount);
+			} else if (arguments[1].equalsIgnoreCase("deposit")) {
+				if (arguments[2] == null) {
+					sender.sendMessage("§cYou must specify an amount to deposit.");
+					return;
+				}
+				double amount;
+				try {
+					amount = Double.parseDouble(arguments[2]); 
+				} catch (NumberFormatException e) {
+					sender.sendMessage("§cInvalid number: " + arguments[2]);
+					return;
+				}
+				if (amount <= 0) {
+					sender.sendMessage("§cAmount to deposit must be positive.");
+					return;
+				}
+				if (amount > CityClaims.instance.economy.getBalance(((Player)sender).getName(), city.getWorld().getName())) {
+					sender.sendMessage("§cYou don't have that much money!.");
+					return;
+				}
+				city.treasury += amount;
+				CityClaims.instance.economy.withdrawPlayer(((Player)sender).getName(), city.getWorld().getName(), amount);
+			} else {
+				sender.sendMessage("§cInvalid subcommand: " + arguments[1]);
+			}
+		}});
+		
+		addCommand("setplotowner", new Command() {public void run(CommandSender sender, String[] arguments,	boolean confirmed) {
+			if (!checkPermission(sender, arguments)) {
+				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
+			}
+			if (arguments.length < 3) {
+				sendUsage(sender);
+				return;
+			}
+			City city = City.getCity(arguments[0]);
+			if (city == null) {
+				sender.sendMessage("§cThere is no city with that name");
+				return;
+			}
+			Plot plot = Plot.getPlot(city, arguments[1]);
+			if (plot == null) {
+				sender.sendMessage("§cInvalid plot name/id: " + arguments[1]);
+				return;
+			}
+			if (plot.owner.equalsIgnoreCase(arguments[2])) {
+				sender.sendMessage("That user already owns that plot");
+			}
+			plot.setOwner(arguments[2] == "unowned" ? null : arguments[2]);
+			sender.sendMessage("Plot owner set");
+		}});
+		
+		addCommand("rename", new Command() {public void run(CommandSender sender, String[] arguments,	boolean confirmed) {
+			if (!checkPermission(sender, arguments)) {
+				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
+			}
+			if (arguments.length < 2) {
+				sendUsage(sender);
+				return;
+			}
+			City city = City.getCity(arguments[0]);
+			if (city == null) {
+				sender.sendMessage("§cThere is no city with that name");
+				return;
+			}
+			city.setName(arguments[1]);
+			sender.sendMessage("City name set to " + arguments[1]);
+		}});
+		
+		addCommand("plotconfig", new Command() {public void run(CommandSender sender, String[] arguments,	boolean confirmed) {
+			if (!checkPermission(sender, arguments)) {
+				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
+			}
+			if (arguments.length < 4) {
+				sendUsage(sender);
+				return;
+			}
+			City city = City.getCity(arguments[0]);
+			if (city == null) {
+				sender.sendMessage("§cThere is no city with that name");
+				return;
+			}
+			Plot plot = Plot.getPlot(city, arguments[3]);
+			if (plot == null) {
+				sender.sendMessage("§cInvalid plot name/id: " + arguments[1]);
+				return;
+			}
+			if (arguments[1].equalsIgnoreCase("type")) {
+				if (arguments[2].equalsIgnoreCase("set")) {//type set
+					if (arguments.length < 5) {
+						sender.sendMessage("§cYou must specify the type to set");
+						return;
+					}
+					PlotType type = city.getType(arguments[4]);
+					if (type == null) {
+						sender.sendMessage("§cThere is no type with that name");
+						return;
+					}
+					plot.setType(type);
+					sender.sendMessage("Plot type successfully set to " + type.name);
+				} else if (arguments[2].equalsIgnoreCase("unset")) {//type unset
+					plot.setType(null);
+					sender.sendMessage("Plot type successfully unset");
+				} else {
+					sender.sendMessage("§cInvalid mode (must be set/unset)");
+				}
+			} else if (arguments[1].equalsIgnoreCase("owner")) {
+				if (arguments[2].equalsIgnoreCase("set")) {//owner set
+					if (arguments.length < 5) {
+						sender.sendMessage("§cYou must specify the type to set");
+						return;
+					}
+					if (plot.owner != null && plot.owner.equalsIgnoreCase(arguments[4])) {
+						sender.sendMessage("That user already owns that plot");
+					}
+					plot.setOwner(arguments[4]);
+					sender.sendMessage("Plot owner set to " + arguments[4]);
+				} else if (arguments[2].equalsIgnoreCase("unset")) {//owner unset
+					if (plot.owner == null) {
+						sender.sendMessage("The plot is now unowned");
+					}
+					plot.setOwner(null);
+					sender.sendMessage("That plot is now unowned");
+				} else {
+					sender.sendMessage("§cInvalid mode (must be set/unset)");
+				}
+			} else if (arguments[1].equalsIgnoreCase("name")) {
+				if (arguments[2].equalsIgnoreCase("set")) {//name set
+					if (arguments.length < 5) {
+						sender.sendMessage("§cYou must specify the name for the plot");
+						return;
+					}
+					plot.setName(arguments[4]);
+					sender.sendMessage("Plot name successfully set to " + arguments[4]);
+				} else if (arguments[2].equalsIgnoreCase("unset")) {//name unset
+					plot.setName(null);
+					sender.sendMessage("Plot name successfully unset");					
+				} else {
+					sender.sendMessage("§cInvalid mode (must be set/unset)");
+				}
+			} else {
+				sender.sendMessage("§cInvalid subcommand");
+			}
+		}});
+		
+		addCommand("info", new Command() {public void run(CommandSender sender, String[] arguments,	boolean confirmed) {
+			if (!checkPermission(sender, arguments)) {
+				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
+			}
+			City city;
+			if (arguments.length >= 1) {
+				city = City.getCity(arguments[1]);
+				if (city == null) {
+					sender.sendMessage("§cThere is no city with that name");
+					return;
+				}
+			} else {
+				city = City.getCity(getClaim(sender));
+				if (city == null) {
+					return;
+				}
+			}
+			Location loc = city.getLocation();
+			String[] cityInfo = {
+				"==== City information ====",
+				"Name: " + city.name,
+				"Id: " + Long.toString(city.getID()),
+				"X: " + loc.getX(),
+				"Y: " + loc.getY(),
+				"Z: " + loc.getZ()
+			};
+			sender.sendMessage(cityInfo);
+		}});
+		
+		addCommand("plot", new Command() {public void run(CommandSender sender, String[] arguments,	boolean confirmed) {
+			if (!checkPermission(sender, arguments)) {
+				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
+			}
+			if (arguments.length < 1) {
+				sendUsage(sender);
+				return;
+			}
+			if (!arguments[0].equalsIgnoreCase("info") && !(sender instanceof Player)) {
+				sender.sendMessage("§cThis subcommand (" + arguments[0] + ") must be run by a player");
+				return;
+			}
+			String subcommand = arguments[0];
+			Plot plot = null;
+			Integer argumentsNumber = argumentCount.get(arguments[0]);
+			argumentsNumber = (argumentsNumber == null ? 0 : argumentsNumber);
+			if (arguments.length >= (argumentsNumber == null ? 0 : argumentsNumber) + 2) {
+				City city = City.getCity(arguments[1]);
+				if (city == null) {
+					sender.sendMessage("§cThere is no city with that name");
+					return;
+				}
+				plot = Plot.getPlot(city, arguments[2]);
+				if (plot == null) {
+					sender.sendMessage("§cThere's no plot with that name or id.");
+					return;
+				}
+				arguments = Arrays.copyOfRange(arguments, 3, 3 + argumentsNumber);
+			} else {
+				if (!(sender instanceof Player)) {
+					sender.sendMessage("§cThis command requires a city and plot if not run by a player");
+					return;
+				}
+				plot = Plot.getPlot(((Player)sender).getLocation());
+				if (plot == null) {
+					sender.sendMessage("§cThere's no plot where you're standing.");
+					return;
+				}
+			}
+			if (subcommand.equalsIgnoreCase("info")) {
+				String[] plotInfo = {
+					"==== Plot info ====",
+					"Name: " + (plot.name != null ? plot.name : "Unnamed"),
+					"Id: " + plot.id,
+					"Owner: " + (plot.owner != null ? plot.owner : "Unowned"),
+					"Type: " + (plot.type != null ? plot.type.name : "No type"),
+					"Size: " + plot.size.toString()
+				};
+				sender.sendMessage(plotInfo);
+			} else if (subcommand.equalsIgnoreCase("price")) {
+				if (plot.parent.reachedLimit((Player)sender, null)) {
+					sender.sendMessage("You have reached the plot limit for this city");
+					return;
+				}
+				if (plot.parent.reachedLimit((Player)sender, plot.type)) {
+					sender.sendMessage("You have reached the limit for this type of plot");
+					return;
+				}
+				Double price = plot.getPrice((Player)sender);
+				if (price == null) {
+					sender.sendMessage("That plot is not for sale");
+				} else {
+					sender.sendMessage("The price to buy this plot is " + eco.format(price));
+				}
+			} else if (subcommand.equalsIgnoreCase("buy")) {
+				Double price = plot.getPrice((Player)sender);
+				if (price == null) {
+					sender.sendMessage("That plot is not for sale");
+					return;
+				}
+				if (plot.parent.reachedLimit((Player)sender, null)) {
+					sender.sendMessage("You have reached the plot limit for this city");
+					return;
+				}
+				if (plot.parent.reachedLimit((Player)sender, plot.type)) {
+					sender.sendMessage("You have reached the limit for this type of plot");
+					return;
+				}
+				if (!CityClaims.instance.economy.has(((Player)sender).getName(), price)) {
+					sender.sendMessage("You don't have enough money to buy that plot!");
+					return;
+				}
+				if (!confirmed) {
+					sender.sendMessage("Are you sure you want to buy this plot for " + eco.format(price) + "?");
+					requireConfirm(sender, arguments);
+					return;
+				}
+				if (plot.sale == null) {
+					if (plot.parent.getFlags().getFlagBoolean("havetreasury")) {
+						plot.parent.treasury += price;
+						plot.parent.saveTreasury();
+					}
+				} else {
+					eco.depositPlayer(plot.owner, plot.parent.getWorld().getName(), price);
+				}
+				eco.withdrawPlayer(((Player)sender).getName(), plot.parent.getWorld().getName(), price);
+				plot.setOwner(((Player)sender).getName());
+				sender.sendMessage("You have bought the plot for " + eco.format(price));
+			} else if (subcommand.equalsIgnoreCase("sell")) {
+				if (!plot.parent.getFlags().getFlagBoolean("allowsell")) {
+					sender.sendMessage("Selling plots to the city is disabled in this city");
+					return;
+				}
+				if (plot.parent.getFlags().getFlagBoolean("requireempty") && !plot.isEmpty()) {
+					sender.sendMessage("Plots must be empty to sell in this city");
+					return;
+				}
+				Double price = plot.getCityPrice((Player)sender, true) * plot.parent.flags.getFlagDouble("sellmultiplier");
+				if(plot.parent.getFlags().getFlagBoolean("havetreasury") && plot.parent.treasury < price) {
+					sender.sendMessage("There isn't enough money in the city treasury to buy this plot");
+				}
+				if (!confirmed) {
+					sender.sendMessage("Are you sure you want to sell this plot for " + eco.format(price) + "?");
+					requireConfirm(sender, arguments);
+					return;
+				}
+				if(plot.parent.getFlags().getFlagBoolean("havetreasury")) {
+					plot.parent.treasury -= price;
+					plot.parent.saveTreasury();
+				}
+				eco.depositPlayer(((Player)sender).getName(), plot.parent.getWorld().getName(), price);
+				plot.setOwner(null);
+				sender.sendMessage("You have sold the plot for " + eco.format(price));
+			} else if (subcommand.equalsIgnoreCase("offer")) {
+				if (!plot.parent.getFlags().getFlagBoolean("playersell")) {
+					sender.sendMessage("Putting plots on sale to other players is disabled in this city");
+					return;
+				}
+				if (plot.sale != null) {
+					sender.sendMessage("This plot is already offered. If you want to change it, please cancel the current offer first.");
+					return;
+				}
+				if (arguments.length < 1) {
+					sender.sendMessage("§cYou must specify the price to offer for.");
+					return;
+				}
+				Double price = parseCurrency(arguments[0]);
+				if (price == null) {
+					sender.sendMessage("Invalid price: " + arguments[0]);
+				}
+				plot.sale = new Plot.Sale(price, null);
+				plot.update();
+				sender.sendMessage("The plot has been offered for sale");
+			} else if (subcommand.equalsIgnoreCase("canceloffer")) {
+				if (plot.sale == null) {
+					sender.sendMessage("This plot is not offered for sale.");
+					return;
+				}
+				plot.sale = null;
+				plot.update();
+				sender.sendMessage("The offer has been canceled");
+			} else if (subcommand.equalsIgnoreCase("abandon")) {
+				if (!confirmed) {
+					sender.sendMessage("Are you sure you want to abandon this plot?");
+					requireConfirm(sender, arguments);
+					return;
+				}
+				plot.setOwner(null);
+				sender.sendMessage("The plot has been abandoned.");
+			} else {
+				sender.sendMessage("§cInvalid subcommand: " + arguments[0]);
+			}
+		}
+		
+		private Map<String,Integer> argumentCount = new HashMap<>();
+		
+		public void init() {
+			argumentCount.put("offer", 1);
+		}
+		
+		});
 		
 		addCommand("confirm", new Command() {public void run(CommandSender sender, String[] arguments,	boolean confirmed) {
 			if (!checkPermission(sender, arguments)) {
@@ -246,7 +934,7 @@ public final class CommandHandler {
 				List<String> helpLines = new ArrayList<>(commands.size());
 				for (Command command : commands.values()) {
 					if (command.checkPermission(sender, null)) {
-						helpLines.add("§9/city " + command.name + ": §b" + command.usage);
+						helpLines.add("§9/city " + command.name + ": §b" + command.description);
 					}
 				}
 				int pages = (int)Math.ceil(helpLines.size() / 10D);
@@ -258,7 +946,7 @@ public final class CommandHandler {
 					sender.sendMessage("§cPage number too high. Only " + pages + " pages available");
 					return;
 				}
-				int lines = helpLines.size() % 10;
+				int lines = page == pages ? helpLines.size() % 10 : 10;
 				if (lines == 0) {
 					lines = 10;
 				}
@@ -281,10 +969,15 @@ public final class CommandHandler {
 					sender.sendMessage("§cYou do not have permission for that command");
 					return;
 				}
-				outputText = new String[3];
+				outputText = new String[3 + command.subusages.size()];
 				outputText[0] = "§9Help for command: §b/city " + command.name;
 				outputText[1] = "§9Description: §b" + command.description;
 				outputText[2] = "§9Usage: §b" + command.usage;
+				int line = 3;
+				for (String subusage : command.subusages) {
+					outputText[line] = "§9Sub-usage: §b" + subusage;
+					line++;
+				}
 			}
 			sender.sendMessage(outputText);			
 		}});
@@ -296,8 +989,11 @@ public final class CommandHandler {
 			}
 			command.description = commandFile.getString(command.name + ".description", "Description is mising");
 			command.usage = commandFile.getString(command.name + ".usage", "Usage is missing");
-			command.permissions = new HashSet<String>(commandFile.getStringList(command.name + ".permission"));
+			command.permissions = new HashSet<String>(commandFile.getStringList(command.name + ".permissions"));
+			command.subusages = commandFile.getStringList(command.name + ".subusages");
 		}
+		
+		eco = CityClaims.instance.economy;
 	}
 	
 	private static Claim getClaim(CommandSender sender, String sub1, String sub2) {//Utility method. Returns claim if successful and error message if not.
@@ -317,15 +1013,14 @@ public final class CommandHandler {
 		return getClaim(sender, "city name", "city");
 	}
 	
-	private static void flagCommand(CommandSender sender, City city, String mode, String arg1, String arg2) {
-		CityFlags flags = city == null ? CityClaims.instance.defaults : city.flags;
-		if (mode == "list") {
+	private static void flagCommand(CommandSender sender, Flags flags, String mode, String arg1, String arg2) {
+		if (mode.equals("list")) {
 			String flagList = "";
-			for (String flag : CityFlags.listFlags(city == null)) {
+			for (String flag : flags.listFlags()) {
 				flagList = flagList + ((arg2 == "all" || flags.getFlag(flag) != null) ? ((flagList == "" ? "" : ", ") + flag) : "");
 			}
 			sender.sendMessage("Flags: " + ((flagList != "") ? flagList : "None"));
-		} else if (mode == "get") {
+		} else if (mode.equals("get")) {
 			if (arg1 == null) {
 				sender.sendMessage("You must specify a flag.");
 				return;
@@ -335,44 +1030,78 @@ public final class CommandHandler {
 				sender.sendMessage("That flag does not exist.");
 				return;
 			}
-			sender.sendMessage("Value of flag " + arg1 + " is " + value.toString());
-		} else if (mode == "set") {
+			sender.sendMessage(arg1 + ": " + value.toString());
+		} else if (mode.equals("set")) {
 			if (arg2 == null) {
 				sender.sendMessage("You must specify a flag and a value.");
 				return;
 			}
-			if(CityFlags.FLAG_TYPES.get(arg1) == null) {
+			String type = flags.getFlagTypes().get(arg1);
+			if(type == null) {
 				sender.sendMessage("That flag does not exist.");
 				return;
 			}
-			Object value = CityFlags.getFlagValueFromString(arg1, arg2);
-			if (value == null) {
-				sender.sendMessage("Flag value is not a valid " + CityFlags.FLAG_TYPES.get(arg1));
+			Object value = flags.getFlagValueFromString(arg1, arg2);
+			if (value == null || type == "boolean" && !(value instanceof Boolean) || type == "integer" && !(value instanceof Integer) || type == "double" && !(value instanceof Double)) {
+				sender.sendMessage("Flag value is not a valid " + type);
 				return;
 			}
-			if (flags.setFlag(arg1, null)) {
+			if (flags instanceof CityFlags ? ((CityFlags)flags).setFlag(arg1, value, sender.hasPermission("cityclaims.admin.overridelocks")) : flags.setFlag(arg1, value)) {
 				sender.sendMessage("Successfully set value of flag " + arg1 + " to " + arg2);
 			} else {
 				sender.sendMessage("That flag has been globally locked");
 			}
-		} else if (mode == "remove") {
+		} else if (mode.equals("unset")) {
 			if (arg1 == null) {
 				sender.sendMessage("You must specify a flag.");
 				return;
 			}
 			if (flags.removeFlag(arg1)) {
-				sender.sendMessage("Flag removed.");
+				sender.sendMessage("Flag is no longer set.");
 			} else {
 				sender.sendMessage("That flag is not set!");
 			}
-		} else if (mode == "lock") {
-			
-		} else if (mode == "unlock") {
-			
-		} else if (mode == "listlocks") {
-			
+		} else 
+		if (mode.equals("lock")) {
+			if (arg1 == null) {
+				sender.sendMessage("You must specify a flag.");
+				return;
+			}
+			if (flags.getFlagTypes().get(arg1) == null) {
+				sender.sendMessage("That flag does not exist.");
+				return;
+			}
+			CityClaims.instance.lockedFlags.add(arg1);
+		} else if (mode.equals("unlock")) {
+			if (arg1 == null) {
+				sender.sendMessage("You must specify a flag.");
+				return;
+			}
+			if (!CityClaims.instance.lockedFlags.remove(arg1)) {
+				sender.sendMessage("That flag does not exist.");
+				return;
+			}
+			CityClaims.instance.lockedFlags.remove(arg1);
+		} else if (mode.equals("listlocks")) {
+			String lockedString = "";
+			for (String flag : CityClaims.instance.lockedFlags) {
+				lockedString = lockedString + (lockedString == "" ? "" : ", ") + flag;
+			}
+			sender.sendMessage("Locked Flags: " + lockedString);
 		} else {
-			sender.sendMessage("Unsupported mode: " + mode);
+			sender.sendMessage("Invalid flag mode: " + mode);
+		}
+	}
+	
+	public static Double parseCurrency(String currency) {
+		try {
+			Matcher m = Pattern.compile("[-0-9]([0-9]+(\\.[0-9]+))").matcher(currency);
+			if (!m.find()) {
+				return null;
+			}
+			return Double.parseDouble(m.group());
+		} catch (NumberFormatException e) {
+			return null;
 		}
 	}
 
