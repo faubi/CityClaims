@@ -817,6 +817,10 @@ public final class CommandHandler {
 					sender.sendMessage("Selling plots to the city is disabled in this city");
 					return;
 				}
+				if (plot.owner == null || !plot.owner.equalsIgnoreCase(((Player)sender).getName())) {
+					sender.sendMessage("You can't sell a plot you don't own!");
+					return;
+				}
 				if (plot.parent.getFlags().getFlagBoolean("requireempty") && !plot.isEmpty()) {
 					sender.sendMessage("Plots must be empty to sell in this city");
 					return;
@@ -842,6 +846,10 @@ public final class CommandHandler {
 					sender.sendMessage("Putting plots on sale to other players is disabled in this city");
 					return;
 				}
+				if (plot.owner == null || !plot.owner.equalsIgnoreCase(((Player)sender).getName())) {
+					sender.sendMessage("You can't put a plot on sale that you don't own!");
+					return;
+				}
 				if (plot.sale != null) {
 					sender.sendMessage("This plot is already offered. If you want to change it, please cancel the current offer first.");
 					return;
@@ -858,6 +866,10 @@ public final class CommandHandler {
 				plot.update();
 				sender.sendMessage("The plot has been offered for sale");
 			} else if (subcommand.equalsIgnoreCase("canceloffer")) {
+				if (plot.owner == null || !plot.owner.equalsIgnoreCase(((Player)sender).getName())) {
+					sender.sendMessage("You can't cancel a sell offer for plot you don't own!");
+					return;
+				}
 				if (plot.sale == null) {
 					sender.sendMessage("This plot is not offered for sale.");
 					return;
@@ -866,6 +878,10 @@ public final class CommandHandler {
 				plot.update();
 				sender.sendMessage("The offer has been canceled");
 			} else if (subcommand.equalsIgnoreCase("abandon")) {
+				if (plot.owner == null || !plot.owner.equalsIgnoreCase(((Player)sender).getName())) {
+					sender.sendMessage("You can't abandon a plot you don't own!");
+					return;
+				}
 				if (!confirmed) {
 					sender.sendMessage("Are you sure you want to abandon this plot?");
 					requireConfirm(sender, arguments);
