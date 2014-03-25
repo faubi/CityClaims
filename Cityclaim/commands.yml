@@ -15,7 +15,7 @@ list:
     - 'cityclaims.general.list'
 flags:
   description: 'Gets or sets city flags'
-  usage: '/city flags <city> <get|set|list|remove> [flag] [value]'
+  usage: '/city flags <city> <get|set|list|unset> [flag] [value]'
   permissions:
     - 'cityclaims.admin.flags'
     - 'cityclaims.admin.flags.[3]' #[3] is flag name
@@ -28,7 +28,7 @@ flags:
     - '/city flags <city> unset <flag>'
 globalflags:
   description: 'Gets, sets, or locks global flags'
-  usage: '/city globalflags <get|set|list|remove|lock|unlock|listlocks> [flag] [value]'
+  usage: '/city globalflags <get|set|list|unset|lock|unlock|listlocks> [flag] [value]'
   permissions:
     - 'cityclaims.admin.globalflags'
     - 'cityclaims.admin.globalflags.[2]' #[2] is flag name
@@ -51,7 +51,6 @@ type:
     - '/city type <city> remove <type>'
     - '/city type <city> flags <type> set <flag> <value>'
     - '/city type <city> flags <type> get <flag>'
-    - '/city type <city> flags <type> unset <flag>'
     - '/city type <city> flags <type> list'
     - '/city type <city> advancedpricing <type> set <range> <price>'
     - '/city type <city> advancedpricing <type> get <range>'
@@ -80,13 +79,6 @@ treasury:
     - '/city treasury <city> deposit <amount>'
     - '/city treasury <city> withdraw <amount>'
     - '/city treasury <city> balance'
-setplotowner:
-  description: 'Set the owner of a plot'
-  usage: '/city setplotowner <city> <plot name|plot id> <owner>'
-  permissions:
-    - 'cityclaims.admin.setplotowner'
-    - 'cityclaims.manage.[1].setplotowner'
-  subusages:
 rename:
   description: 'Changes the name of a city'
   usage: '/city rename <city> <new name>'

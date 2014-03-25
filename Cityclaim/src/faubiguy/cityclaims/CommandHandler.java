@@ -395,9 +395,12 @@ public final class CommandHandler {
 					}
 					type.advancedPricing.removeRange(range);
 					sender.sendMessage("Range " + range.toString() + " no longer has a price set");
+					if(type.advancedPricing.getRanges().isEmpty()) {
+						type.advancedPricing = null;
+					}
 					type.save();
 				} else if (arguments[1].equalsIgnoreCase("reset")) {
-					type.advancedPricing.removeAllRanges();
+					type.advancedPricing = null;
 					type.save();
 				} else if (arguments[1].equalsIgnoreCase("list")) {
 					String rangesString = "";
