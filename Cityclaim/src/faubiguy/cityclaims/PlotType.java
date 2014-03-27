@@ -63,21 +63,37 @@ public class PlotType {
 		public PlotType type;
 		
 		public static final Map<String, String> TYPE_FLAG_TYPES;
+		private static final Flags DEFAULTS;
 		static {
 			TYPE_FLAG_TYPES = new HashMap<>();
 			TYPE_FLAG_TYPES.put("limit", "integer");
 			TYPE_FLAG_TYPES.put("price", "double");
+			TYPE_FLAG_TYPES.put("unsellable", "boolean");
+			Map<String,Object> defaultsMap = new HashMap<>();
+			defaultsMap.put("limit", -1);
+			defaultsMap.put("price", 0);
+			defaultsMap.put("unsellable", false);
+			DEFAULTS = new TypeFlags(null, defaultsMap);
 		}
 		
 		public TypeFlags(PlotType type) {
+			this(type, new HashMap<String,Object>());
+		}
+		
+		public TypeFlags(PlotType type, Map<String,Object> flagsMap) {
 			super(TYPE_FLAG_TYPES);
 			this.type = type;
-			flags = new HashMap<>();
+			flags = flagsMap;
 		}
 
 		@Override
 		public void save() {
 			type.save();
+		}
+
+		@Override
+		public Flags getDefaults() {
+			return DEFAULTS;
 		}		
 		
 	}

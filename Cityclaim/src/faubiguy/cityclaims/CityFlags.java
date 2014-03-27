@@ -146,4 +146,9 @@ public class CityFlags extends Flags {
 		
 	}
 
+	@Override
+	public Flags getDefaults() {
+		return DEFAULTS;
+	}
+
 }

@@ -15,6 +15,8 @@ public abstract class Flags {
 	public Map<String,String> getFlagTypes() {
 		return flagTypes;
 	}
+	
+	public abstract Flags getDefaults();
 
 	protected Map<String, Object> flags;
 
@@ -27,7 +29,8 @@ public abstract class Flags {
 	}
 
 	public Object getFlag(String flag) {
-		return flags.get(flag);
+		Object value = flags.get(flag);
+		return value == null ? getDefaults().getFlag(flag) : value;
 	}
 
 	public Boolean getFlagBoolean(String flag) {
