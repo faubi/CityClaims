@@ -1,5 +1,5 @@
 name: CityClaims
-version: 1.0.1
+version: 1.0.2
 author: faubiguy
 
 main: faubiguy.cityclaims.CityClaims
@@ -17,5 +17,3 @@ commands:
   abandonplot:
     description: Sell plot back to the city (alias for /city plot abandon) 
     permission: 'cityclaims.general.plot.abandon'
- 
-#permissions: TODO add permissions to plugin.yml
