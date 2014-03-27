@@ -99,12 +99,12 @@ public class AdvancedPricing {
 		for (Range range : ranges.keySet()) {
 			if (rangeToCheck.unbounded) {
 				if (rangeToCheck.min <= range.max || range.unbounded) {
-					return rangeToCheck;
+					return range;
 				}
 			} else {
 				if (range.contains(rangeToCheck.min)
 						|| range.contains(rangeToCheck.max)) {
-					return rangeToCheck;
+					return range;
 				}
 			}
 		}
