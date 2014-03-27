@@ -35,8 +35,13 @@ public class Plot {
 	}
 	
 	public Plot(Claim base) {
+		this(base, null);
+	}
+	
+	public Plot(Claim base, City city) {
 		this.base = base;
 		this.size = new PlotSize(base.getWidth(), base.getHeight());
+		this.parent = city;
 	}
 
 	public static Plot getPlot(City city, String name) {
@@ -53,16 +58,16 @@ public class Plot {
 		Claim claim = GriefPrevention.instance.dataStore.getClaimAt(loc, true,
 				null);
 		if (claim == null) {
-			CityClaims.instance.getLogger().info("getPlot: No claim");
+			//CityClaims.instance.getLogger().info("getPlot: No claim");
 			return null;
 		}
 		if (claim.parent == null) {
-			CityClaims.instance.getLogger().info("getPlot: Top level claim");
+			//CityClaims.instance.getLogger().info("getPlot: Top level claim");
 			return null;
 		}
 		City city = City.getCity(claim.parent.getID());
 		if (city == null) {
-			CityClaims.instance.getLogger().info("getPlot: No city");
+			//CityClaims.instance.getLogger().info("getPlot: No city");
 			return null;
 		}
 		return city.getPlot(loc);
@@ -185,6 +190,10 @@ public class Plot {
 	public String getCornerString() {
 		return getStringFromLocation(getCorner());
 		
+	}
+	
+	public boolean unsellable() {
+		return (type != null && type.flags.getFlagBoolean("unsellable"));
 	}
 	
 	public static Location getLocationFromString(String str) {

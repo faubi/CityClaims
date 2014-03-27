@@ -35,6 +35,8 @@ public class City {
 
 	public String name;
 
+	public long nextPlotId;
+
 	protected City(String name) {
 		this.name = name;
 	}
@@ -104,28 +106,57 @@ public class City {
 		city.sizeTypes = new HashMap<>();
 		city.id = base.getID();
 		city.treasury = 0;
+		city.nextPlotId = 0;
 		
-		int plotId = 0;
 		for(Claim plotClaim : base.children) {
-			Plot plot = new Plot(plotClaim);
-			//CityClaims.instance.getLogger().info("Found Plot: " + plot.getCornerString());
-			plot.surfaceLevel = 255;
-			Location plotCorner = plotClaim.getLesserBoundaryCorner().clone();
-			for (;plot.surfaceLevel>=0;plot.surfaceLevel--) {
-				plotCorner.setY(plot.surfaceLevel);
-				if (!plotCorner.getBlock().isEmpty()) {
-					break;
-				}
-			}
-			plot.id = plotId;
-			city.plots.put(plot.id, plot);
-			plotId++;
+			city.addPlot(plotClaim, false);
 		}
 		city.save();
 		cities.put(name, city);
 		names.put(base.getID(), name);
 		saveIDFile();
 		return null;
+	}
+	
+	public boolean addPlot(Claim plotClaim, boolean save) {
+		Plot existing = Plot.getPlot(plotClaim.getLesserBoundaryCorner());
+		if(existing != null) {
+			return false;
+		}
+		Plot plot = new Plot(plotClaim);
+		//CityClaims.instance.getLogger().info("Found Plot: " + plot.getCornerString());
+		plot.surfaceLevel = 255;
+		Location plotCorner = plotClaim.getLesserBoundaryCorner().clone();
+		for (;plot.surfaceLevel>=0;plot.surfaceLevel--) {
+			plotCorner.setY(plot.surfaceLevel);
+			if (!plotCorner.getBlock().isEmpty()) {
+				break;
+			}
+		}
+		plot.id = getNextPlotId();
+		plot.parent = this;
+		plots.put(plot.id, plot);
+		if (save) {
+			CityFile file = getFile();
+			file.savePlot(plot, false);
+			file.saveNextPlotId(true);
+		}
+		return true;
+	}
+	
+	public boolean removePlot(Plot plot, boolean save) {
+		if (plot.parent != this) {
+			return false;
+		}
+		plots.remove(plot.id);
+		if (save) {
+			getFile().savePlots(true);
+		}
+		return true;
+	}
+
+	private long getNextPlotId() {
+		return nextPlotId++;
 	}
 
 	public void delete() {
@@ -317,13 +348,13 @@ public class City {
 
 	public Plot getPlot(Location loc) {
 		for (Plot plot : plots.values()) {
-			CityClaims.instance.getLogger().info("Checking plot: " + plot.id);
+			//CityClaims.instance.getLogger().info("Checking plot: " + plot.id);
 			if (plot.base.contains(loc, true, false)) {
-				CityClaims.instance.getLogger().info("Plot found");
+				//CityClaims.instance.getLogger().info("Plot found");
 				return plot;
 			}
 		}
-		CityClaims.instance.getLogger().info("No plot containing location");
+		//CityClaims.instance.getLogger().info("No plot containing location");
 		return null;
 	}
 

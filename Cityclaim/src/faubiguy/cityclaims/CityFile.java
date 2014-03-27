@@ -105,9 +105,7 @@ public class CityFile {
 			plot.id = section.getLong("id");
 			if (section.isConfigurationSection("sale")) {
 				try {
-					plot.sale = new Plot.Sale(section.getDouble("sale.price", 0),
-							new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-									.parse(section.getString("sale.expires", "")));
+					plot.sale = new Plot.Sale(section.getDouble("sale.price", 0), section.isSet("sale.expires") ? new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(section.getString("sale.expires", "")) : null);
 				} catch (ParseException e) {
 					return null;
 				}
@@ -143,8 +141,9 @@ public class CityFile {
 		if (plot.sale != null) {
 			section = section.createSection("sale");
 			section.set("price", plot.sale.price);
-			section.set("expires", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-					.format(plot.sale.expires));
+			if (plot.sale.expires != null) {
+				section.set("expires", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(plot.sale.expires));
+			}
 		}
 		if (saveFile) {
 			return save();
@@ -301,6 +300,21 @@ public class CityFile {
 		return true;
 	}
 
+	public long loadNextPlotId() throws CityLoadingException {
+		if (!file.isLong("next_plot_id")) {
+			return file.isConfigurationSection("plots") ? file.getConfigurationSection("plots").getKeys(false).size() : 0;
+		}
+		return file.getLong("next_plot_id");
+	}
+
+	public boolean saveNextPlotId(boolean saveFile) {
+		file.set("next_plot_id", city.nextPlotId);
+		if (saveFile) {
+			return save();
+		}
+		return true;
+	}
+
 	public void loadCity() throws CityLoadingException {
 		city.id = loadID();
 		city.base = GriefPrevention.instance.dataStore.getClaim(city.id);
@@ -313,6 +327,7 @@ public class CityFile {
 		city.flags = loadFlags();
 		city.treasury = loadTreasury();
 		city.sizeTypes = loadSizeTypes();
+		city.nextPlotId = loadNextPlotId();
 	}
 
 	public boolean saveCity() {
@@ -322,6 +337,7 @@ public class CityFile {
 		saveFlags(false);
 		saveTreasury(false);
 		saveSizeTypes(false);
+		saveNextPlotId(false);
 		return save();
 	}
 

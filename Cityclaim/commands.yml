@@ -86,7 +86,7 @@ rename:
     - 'cityclaims.admin.rename'
 plotconfig:
   description: 'Set the type for a specific plot'
-  usage: '/city plotconfig <city> <type|owner|name> <set|unset> <plot name|plot id> [type]'
+  usage: '/city plotconfig <city> <type|owner|name> <set|unset> <plot name|plot id> [type|owner|name]'
   permissions:
     - 'cityclaims.admin.plotconfig'
     - 'cityclaims.manage.[1].plotconfig'
@@ -115,6 +115,18 @@ plot:
     - '/city plot info [city] [plot]'
     - '/city plot price [city] [plot]'
     - '/city plot abandon [city] [plot]'
+addplot:
+  description: "Makes the subdivison where you're standing a plot"
+  usage: '/city addplot'
+  permissions:
+    - 'city.admin.addplot'
+    - 'city.manage.[1].addplot'
+removeplot:
+  description: 'Make a plot no longer be a plot'
+  usage: '/city removeplot [city] [plot]'
+  permissions:
+    - 'city.admin.removeplot'
+    - 'city.manage.[1].removeplot'
 confirm:
   description: 'Confirms certain commands'
   usage: '/city confirm'
