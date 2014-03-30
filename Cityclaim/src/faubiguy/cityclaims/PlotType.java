@@ -66,13 +66,21 @@ public class PlotType {
 		private static final Flags DEFAULTS;
 		static {
 			TYPE_FLAG_TYPES = new HashMap<>();
-			TYPE_FLAG_TYPES.put("limit", "integer");
 			TYPE_FLAG_TYPES.put("price", "double");
-			TYPE_FLAG_TYPES.put("unsellable", "boolean");
+			TYPE_FLAG_TYPES.put("plotlimit", "integer");
+			TYPE_FLAG_TYPES.put("requireempty", "boolean");
+			TYPE_FLAG_TYPES.put("allowsell", "boolean");
+			TYPE_FLAG_TYPES.put("sellmultiplier", "double");
+			TYPE_FLAG_TYPES.put("playersell", "boolean");
+			TYPE_FLAG_TYPES.put("havetreasury", "boolean");
 			Map<String,Object> defaultsMap = new HashMap<>();
-			defaultsMap.put("limit", -1);
 			defaultsMap.put("price", 0);
-			defaultsMap.put("unsellable", false);
+			defaultsMap.put("plotlimit", -1);
+			defaultsMap.put("requireempty", true);
+			defaultsMap.put("allowsell", true);
+			defaultsMap.put("sellmultiplier", 1D);
+			defaultsMap.put("playersell", true);
+			defaultsMap.put("havetreasury", true);
 			DEFAULTS = new TypeFlags(null, defaultsMap);
 		}
 		

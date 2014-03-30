@@ -18,25 +18,16 @@ public class CityFlags extends Flags {
 	
 	public final City city;
 	
+	public PlotType.TypeFlags typeFlags = new PlotType.TypeFlags(null);
+	
 	static {
 		Map<String,Object> defaultsMap = new HashMap<>();
-		defaultsMap.put  ("plotlimit", -1);
-		defaultsMap.put("requireempty", true);
-		defaultsMap.put("allowsell", true);
-		defaultsMap.put("sellmultiplier", 1D);
-		defaultsMap.put("playersell", true);
-		defaultsMap.put("havetreasury", true);
 		defaultsMap.put("hidden", false);
-		DEFAULTS = new CityFlags(null, defaultsMap);
-		
+		defaultsMap.put("cityplotlimit", -1);
+		DEFAULTS = new CityFlags(null, defaultsMap);		
 		FLAG_TYPES = new HashMap<>();
-		FLAG_TYPES.put("plotlimit", "integer");
-		FLAG_TYPES.put("requireempty", "boolean");
-		FLAG_TYPES.put("allowsell", "boolean");
-		FLAG_TYPES.put("sellmultiplier", "double");
-		FLAG_TYPES.put("playersell", "boolean");
-		FLAG_TYPES.put("havetreasury", "boolean");
 		FLAG_TYPES.put("hidden", "boolean");
+		defaultsMap.put("cityplotlimit", "integer");
 		
 	}
 	
@@ -48,12 +39,11 @@ public class CityFlags extends Flags {
 		super(FLAG_TYPES);
 		this.city = city; 
 		flags = map;
+		inheritFrom = city.flags.typeFlags;
 	}
 
 	public CityFlags(City city) { // Construct without any flags
-		super(FLAG_TYPES);
-		this.city = city;
-		flags = new HashMap<>();
+		this(city, new HashMap<String,Object>());
 	}
 	
 	public boolean hasCity() {
@@ -76,7 +66,12 @@ public class CityFlags extends Flags {
 
 	public Object getFlag(String flag, boolean inherit) {		
 		//CityClaims.instance.getLogger().info("Getting flag: " + flag);
-		Object value = flags.get(flag);
+		Object value;
+		if (typeFlags.isFlag(flag)) {
+			value = typeFlags.getFlag(flag);
+		} else {
+			value = flags.get(flag);
+		}
 		if (!inherit) {
 			//CityClaims.instance.getLogger().info("Inherit is false");
 			//CityClaims.instance.getLogger().info("Returning " + (value != null ? value.toString() : "null"));
@@ -84,10 +79,10 @@ public class CityFlags extends Flags {
 		}
 		if (value == null) {
 			//CityClaims.instance.getLogger().info("Checking server default");
-			value = CityClaims.instance.defaults.getFlag(flag, false);
+			value = CityClaims.instance.defaults.getFlagNoInherit(flag);
 			if (value == null) {
 				//CityClaims.instance.getLogger().info("Checking plugin default");
-				value = CityFlags.DEFAULTS.getFlag(flag, false);
+				value = getDefaults().getFlagNoInherit(flag);
 			}
 		}
 		//CityClaims.instance.getLogger().info("Returning (inherited)" + value.toString());
@@ -99,12 +94,29 @@ public class CityFlags extends Flags {
 	}
 
 	public boolean setFlag(String flag, Object value, boolean overrideLock) {
-		if (CityClaims.instance.lockedFlags.contains(flag) && !overrideLock
-				&& flags.get(flag) == null) {
+		if (!overrideLock && CityClaims.instance.lockedFlags.contains(flag) && flags.get(flag) == null) {
 			return false;
 		}
-		flags.put(flag, value);
+		if (typeFlags.isFlag(flag)) {
+			typeFlags.setFlag(flag, value);
+		} else {
+			flags.put(flag, value);
+		}
 		return true;
+	}
+	
+	public void setFlags(Map<String,Object> flags) {
+		setFlags(flags, false);
+	}
+	
+	public void setFlags(Map<String,Object> flags, boolean overrideLock) {
+		for (Map.Entry<String, Object> entry : flags.entrySet()) {
+			String flag = entry.getKey();
+			if (!overrideLock && CityClaims.instance.lockedFlags.contains(flag) && flags.get(flag) == null) {
+				return;
+			}
+			setFlag(flag, entry.getValue());
+		}
 	}
 	
 	public static void loadGlobalFlags() {
@@ -149,6 +161,17 @@ public class CityFlags extends Flags {
 	@Override
 	public Flags getDefaults() {
 		return DEFAULTS;
+	}
+	
+	public Map<String,Object> getMap() {
+		Map<String,Object> map = new HashMap<>();
+		for (Map.Entry<String,Object> entry : flags.entrySet()) {
+			map.put(entry.getKey(), entry.getValue());
+		}
+		for (Map.Entry<String,Object> entry : typeFlags.getMap().entrySet()) {
+			map.put(entry.getKey(), entry.getValue());
+		}
+		return map;
 	}
 
 }
