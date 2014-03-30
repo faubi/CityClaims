@@ -299,7 +299,7 @@ public class City {
 	
 	public boolean reachedLimit(Player player, PlotType type) {
 		int owned = getOwnedPlots(player, type);
-		int limit = (type == null ? flags.getFlagInt("plotlimit") : type.flags.getFlagInt("limit"));
+		int limit = (type == null ? flags.getFlagInt("plotlimit") : type.flags.getFlagInt("plotlimit"));
 		return limit >= 0 && limit <= owned;		
 	}
 

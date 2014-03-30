@@ -1,5 +1,6 @@
 package faubiguy.cityclaims;
 
+import java.util.Calendar;
 import java.util.Date;
 
 import org.bukkit.Location;
@@ -18,7 +19,7 @@ public class Plot {
 	public PlotSize size;
 	public PlotType type;
 	public String owner;
-	public Sale sale;
+	private Sale sale;
 	public int surfaceLevel = 64;
 	public long id;
 
@@ -81,7 +82,7 @@ public class Plot {
 			base.addManager(owner);
 			base.setPermission(owner, ClaimPermission.Build);
 		}
-		sale = null;
+		setSale(null);
 		update();
 	}
 
@@ -117,8 +118,8 @@ public class Plot {
 	public Double getPrice(Player player) {
 		if (owner == null) {
 			return getCityPrice(player);
-		} else if (sale != null) {
-			return sale.price;
+		} else if (getSale() != null) {
+			return getSale().price;
 		} else {
 			return null;
 		}
@@ -139,13 +140,11 @@ public class Plot {
 	}
 
 	public void putForSale(double price, Date expires) {
-		sale = new Sale(price, expires);
-		parent.updatePlot(this);
+		setSale(new Sale(price, expires));
 	}
 
 	public void removeSale() {
-		sale = null;
-		parent.updatePlot(this);
+		setSale(null);
 	}
 	
 	public boolean isEmpty() {
@@ -196,6 +195,28 @@ public class Plot {
 		return (type != null && type.flags.getFlagBoolean("unsellable"));
 	}
 	
+	public boolean hasSale() {
+		return getSale() != null;
+	}
+	
+	public Sale getSale() {
+		if (sale != null & sale.expires.before(Calendar.getInstance().getTime())) {
+			sale = null;
+		}
+		return sale;
+	}
+
+	public void setSale(Sale sale) {
+		this.sale = sale;
+	}
+	
+	public Flags getFlags() {
+		if (type == null) {
+			return PlotType.TypeFlags.DEFAULTS;
+		}
+		return type.flags;
+	}
+
 	public static Location getLocationFromString(String str) {
 		String[] parts = str.split(";");
 		if (parts.length != 4) {

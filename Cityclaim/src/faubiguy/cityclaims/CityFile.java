@@ -105,7 +105,7 @@ public class CityFile {
 			plot.id = section.getLong("id");
 			if (section.isConfigurationSection("sale")) {
 				try {
-					plot.sale = new Plot.Sale(section.getDouble("sale.price", 0), section.isSet("sale.expires") ? new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(section.getString("sale.expires", "")) : null);
+					plot.putForSale(section.getDouble("sale.price", 0), section.isSet("sale.expires") ? new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(section.getString("sale.expires", "")) : null);
 				} catch (ParseException e) {
 					return null;
 				}
@@ -138,11 +138,12 @@ public class CityFile {
 		section.set("type", plot.type == null ? null : plot.type.name);
 		section.set("size", plot.size.toString());
 		section.set("surface_level", plot.surfaceLevel);
-		if (plot.sale != null) {
+		Plot.Sale sale = plot.getSale();
+		if (sale != null) {
 			section = section.createSection("sale");
-			section.set("price", plot.sale.price);
-			if (plot.sale.expires != null) {
-				section.set("expires", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(plot.sale.expires));
+			section.set("price", sale.price);
+			if (sale.expires != null) {
+				section.set("expires", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(sale.expires));
 			}
 		}
 		if (saveFile) {

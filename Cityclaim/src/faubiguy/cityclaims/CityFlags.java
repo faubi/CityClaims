@@ -23,11 +23,9 @@ public class CityFlags extends Flags {
 	static {
 		Map<String,Object> defaultsMap = new HashMap<>();
 		defaultsMap.put("hidden", false);
-		defaultsMap.put("cityplotlimit", -1);
 		DEFAULTS = new CityFlags(null, defaultsMap);		
 		FLAG_TYPES = new HashMap<>();
 		FLAG_TYPES.put("hidden", "boolean");
-		defaultsMap.put("cityplotlimit", "integer");
 		
 	}
 	

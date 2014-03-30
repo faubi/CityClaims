@@ -2,6 +2,8 @@ package faubiguy.cityclaims;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -307,7 +309,7 @@ public final class CommandHandler {
 					return;
 				}
 				if (arguments[1] == null) {
-					sender.sendMessage("§cYou must specify a mode (get, set, or list).");
+					sender.sendMessage("§cYou must specify a mode (get, set, unset, or list).");
 					return;
 				}
 				PlotType type = city.getType(arguments[0]);
@@ -315,7 +317,7 @@ public final class CommandHandler {
 					sender.sendMessage("§cThere is no type with that name.");
 					return;
 				}
-				if (!arguments[1].equals("get") && !arguments[1].equals("set") && !arguments[1].equals("list")) {
+				if (!arguments[1].equals("get") && !arguments[1].equals("set") && !arguments[1].equals("list") && !arguments[1].equals("unset")) {
 					sender.sendMessage("§cInvalid flag mode: " + arguments[1]);
 				}
 				flagCommand(sender, type.flags, arguments[1], arguments[2], arguments[3]);
@@ -759,7 +761,7 @@ public final class CommandHandler {
 					"Owner: " + (plot.owner != null ? plot.owner : "Unowned"),
 					"Type: " + (plot.getType() != null ? plot.getType().name : "No type"),
 					"Size: " + plot.size.toString(),
-					"Sale Offer: " + (plot.sale != null ? eco.format(plot.sale.price) : "Not offered")
+					"Sale Offer: " + (plot.getSale() != null ? eco.format(plot.getSale().price) : "Not offered")
 				};
 				sender.sendMessage(plotInfo);
 			} else if (subcommand.equals("price")) {
@@ -791,7 +793,7 @@ public final class CommandHandler {
 					sender.sendMessage("You have reached the limit for this type of plot");
 					return;
 				}
-				if (!CityClaims.instance.economy.has(((Player)sender).getName(), price)) {
+				if (!eco.has(((Player)sender).getName(), price)) {
 					sender.sendMessage("You don't have enough money to buy that plot!");
 					return;
 				}
@@ -800,8 +802,8 @@ public final class CommandHandler {
 					requireConfirm(sender, originalArguments);
 					return;
 				}
-				if (plot.sale == null) {
-					if (plot.parent.getFlags().getFlagBoolean("havetreasury")) {
+				if (plot.getSale() == null) {
+					if (plot.getFlags().getFlagBoolean("usetreasury")) {
 						plot.parent.treasury += price;
 						plot.parent.saveTreasury();
 					}
@@ -812,7 +814,7 @@ public final class CommandHandler {
 				plot.setOwner(((Player)sender).getName());
 				sender.sendMessage("You have bought the plot for " + eco.format(price));
 			} else if (subcommand.equals("sell")) {
-				if (!plot.parent.getFlags().getFlagBoolean("allowsell")) {
+				if (!plot.getFlags().getFlagBoolean("allowsell")) {
 					sender.sendMessage("Selling plots to the city is disabled in this city");
 					return;
 				}
@@ -820,16 +822,16 @@ public final class CommandHandler {
 					sender.sendMessage("You can't sell a plot you don't own!");
 					return;
 				}
-				if (plot.unsellable()) {
+				if (!plot.getFlags().getFlagBoolean("allowsell")) {
 					sender.sendMessage("§cThis type of plot can't be sold.");
 					return;
 				}
-				if (plot.parent.getFlags().getFlagBoolean("requireempty") && !plot.isEmpty()) {
+				if (plot.getFlags().getFlagBoolean("requireempty") && !plot.isEmpty()) {
 					sender.sendMessage("Plots must be empty to sell in this city");
 					return;
 				}
 				Double price = plot.getCityPrice((Player)sender, true) * plot.parent.flags.getFlagDouble("sellmultiplier");
-				if(plot.parent.getFlags().getFlagBoolean("havetreasury") && plot.parent.treasury < price) {
+				if(plot.getFlags().getFlagBoolean("usetreasury") && plot.parent.treasury < price) {
 					sender.sendMessage("There isn't enough money in the city treasury to buy this plot");
 				}
 				if (!confirmed) {
@@ -837,7 +839,7 @@ public final class CommandHandler {
 					requireConfirm(sender, originalArguments);
 					return;
 				}
-				if(plot.parent.getFlags().getFlagBoolean("havetreasury")) {
+				if(plot.getFlags().getFlagBoolean("usetreasury")) {
 					plot.parent.treasury -= price;
 					plot.parent.saveTreasury();
 				}
@@ -845,7 +847,7 @@ public final class CommandHandler {
 				plot.setOwner(null);
 				sender.sendMessage("You have sold the plot for " + eco.format(price));
 			} else if (subcommand.equals("offer")) {
-				if (!plot.parent.getFlags().getFlagBoolean("playersell")) {
+				if (!plot.getFlags().getFlagBoolean("playersell")) {
 					sender.sendMessage("Putting plots on sale to other players is disabled in this city");
 					return;
 				}
@@ -853,11 +855,11 @@ public final class CommandHandler {
 					sender.sendMessage("You can't put a plot on sale that you don't own!");
 					return;
 				}
-				if (plot.unsellable()) {
+				if (!plot.getFlags().getFlagBoolean("playersell")) {
 					sender.sendMessage("§cThis type of plot can't be offered for sale.");
 					return;
 				}
-				if (plot.sale != null) {
+				if (plot.getSale() != null) {
 					sender.sendMessage("This plot is already offered. If you want to change it, please cancel the current offer first.");
 					return;
 				}
@@ -870,7 +872,21 @@ public final class CommandHandler {
 					sender.sendMessage("Invalid price: " + arguments[0]);
 					return;
 				}
-				plot.sale = new Plot.Sale(price, null);
+				String daysToExpireString = arguments.length >= 2 ? arguments[1] : null;
+				Date expires = null;
+				if (daysToExpireString != null) {
+					int days;
+					try {
+						days = Integer.parseInt(daysToExpireString);
+					} catch (NumberFormatException e) {
+						sender.sendMessage("§cInvalid integer: " + daysToExpireString);
+						return;
+					}
+					Calendar cal = Calendar.getInstance();
+					cal.add(Calendar.DAY_OF_YEAR, days);
+					expires = cal.getTime();
+				}
+				plot.putForSale(price, expires);
 				plot.update();
 				sender.sendMessage("The plot has been offered for sale for " + eco.format(price));
 			} else if (subcommand.equals("canceloffer")) {
@@ -878,11 +894,11 @@ public final class CommandHandler {
 					sender.sendMessage("You can't cancel a sell offer for plot you don't own!");
 					return;
 				}
-				if (plot.sale == null) {
+				if (plot.getSale() == null) {
 					sender.sendMessage("This plot is not offered for sale.");
 					return;
 				}
-				plot.sale = null;
+				plot.removeSale();
 				plot.update();
 				sender.sendMessage("The offer has been canceled");
 			} else if (subcommand.equals("abandon")) {
@@ -890,11 +906,11 @@ public final class CommandHandler {
 					sender.sendMessage("You can't abandon a plot you don't own!");
 					return;
 				}
-				if (plot.unsellable()) {
+				if (!plot.getFlags().getFlagBoolean("allowabandon")) {
 					sender.sendMessage("§cThis type of plot can't be abandoned.");
 					return;
 				}
-				if (plot.parent.getFlags().getFlagBoolean("requireempty") && !plot.isEmpty()) {
+				if (plot.getFlags().getFlagBoolean("requireempty") && !plot.isEmpty()) {
 					sender.sendMessage("Plots must be empty to abandon in this city");
 					return;
 				}
@@ -913,7 +929,7 @@ public final class CommandHandler {
 		private Map<String,Integer> argumentCount = new HashMap<>();
 		
 		public void init() {
-			argumentCount.put("offer", 1);
+			argumentCount.put("offer", 2);
 		}
 		
 		});
