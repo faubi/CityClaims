@@ -652,6 +652,7 @@ public final class CommandHandler {
 						sender.sendMessage("That user already owns that plot");
 					}
 					plot.setOwner(arguments[4]);
+					plot.update();
 					sender.sendMessage("Plot owner set to " + arguments[4]);
 				} else if (arguments[2].equalsIgnoreCase("unset")) {//owner unset
 					if (plot.owner == null) {
@@ -672,9 +673,35 @@ public final class CommandHandler {
 					sender.sendMessage("Plot name successfully set to " + arguments[4]);
 				} else if (arguments[2].equalsIgnoreCase("unset")) {//name unset
 					plot.setName(null);
-					sender.sendMessage("Plot name successfully unset");					
+					sender.sendMessage("Plot name successfully unset.");					
 				} else {
 					sender.sendMessage("§cInvalid mode (must be set/unset)");
+				}
+			} else if (arguments[1].equalsIgnoreCase("surfacelevel")) {
+				if (arguments[2].equalsIgnoreCase("set")) {//name set
+					if (arguments.length < 5) {
+						sender.sendMessage("§cYou must specify the name for the plot.");
+						return;
+					}
+					if (plot.parent.getPlot(arguments[4]) != null) {
+						sender.sendMessage("§cThere is already a plot with that name.");
+						return;
+					}
+					int surfaceLevel;
+					try {
+						surfaceLevel = Integer.parseInt(arguments[4]);
+					} catch (NumberFormatException e) {
+						sender.sendMessage("§cInvalid integer: " + arguments[4]);
+						return;
+					}
+					if (surfaceLevel < 0 || surfaceLevel >= plot.parent.getWorld().getMaxHeight()) {
+						sender.sendMessage("§cThat level is higher or lower than the world boundaries");
+						return;
+					}
+					plot.surfaceLevel = surfaceLevel;
+					sender.sendMessage("Plot surface level successfully set to " + arguments[4]);
+				} else {
+					sender.sendMessage("§cInvalid mode (must be set)");
 				}
 			} else {
 				sender.sendMessage("§cInvalid subcommand");
@@ -761,7 +788,8 @@ public final class CommandHandler {
 					"Owner: " + (plot.owner != null ? plot.owner : "Unowned"),
 					"Type: " + (plot.getType() != null ? plot.getType().name : "No type"),
 					"Size: " + plot.size.toString(),
-					"Sale Offer: " + (plot.getSale() != null ? eco.format(plot.getSale().price) : "Not offered")
+					"Sale Offer: " + (plot.getSale() != null ? eco.format(plot.getSale().price) : "Not offered"),
+					"Surface level: " + plot.surfaceLevel
 				};
 				sender.sendMessage(plotInfo);
 			} else if (subcommand.equals("price")) {
@@ -812,6 +840,7 @@ public final class CommandHandler {
 				}
 				eco.withdrawPlayer(((Player)sender).getName(), plot.parent.getWorld().getName(), price);
 				plot.setOwner(((Player)sender).getName());
+				plot.update();
 				sender.sendMessage("You have bought the plot for " + eco.format(price));
 			} else if (subcommand.equals("sell")) {
 				if (!plot.getFlags().getFlagBoolean("allowsell")) {
@@ -830,7 +859,7 @@ public final class CommandHandler {
 					sender.sendMessage("Plots must be empty to sell in this city");
 					return;
 				}
-				Double price = plot.getCityPrice((Player)sender, true) * plot.parent.flags.getFlagDouble("sellmultiplier");
+				Double price = plot.getCityPrice((Player)sender, true) * plot.getFlags().getFlagDouble("sellmultiplier");
 				if(plot.getFlags().getFlagBoolean("usetreasury") && plot.parent.treasury < price) {
 					sender.sendMessage("There isn't enough money in the city treasury to buy this plot");
 				}
@@ -889,9 +918,12 @@ public final class CommandHandler {
 				plot.putForSale(price, expires);
 				plot.update();
 				sender.sendMessage("The plot has been offered for sale for " + eco.format(price));
+				if (daysToExpireString != null) {
+					sender.sendMessage("The sale offer will expire in " + daysToExpireString + " syas");
+				}
 			} else if (subcommand.equals("canceloffer")) {
 				if (plot.owner == null || !plot.owner.equalsIgnoreCase(((Player)sender).getName())) {
-					sender.sendMessage("You can't cancel a sell offer for plot you don't own!");
+					sender.sendMessage("You can't cancel a sale offer for plot you don't own!");
 					return;
 				}
 				if (plot.getSale() == null) {

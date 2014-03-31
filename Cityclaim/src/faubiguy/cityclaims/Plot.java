@@ -83,7 +83,6 @@ public class Plot {
 			base.setPermission(owner, ClaimPermission.Build);
 		}
 		setSale(null);
-		update();
 	}
 
 	public boolean setName(String name) {
@@ -189,10 +188,6 @@ public class Plot {
 	public String getCornerString() {
 		return getStringFromLocation(getCorner());
 		
-	}
-	
-	public boolean unsellable() {
-		return (type != null && type.flags.getFlagBoolean("unsellable"));
 	}
 	
 	public boolean hasSale() {

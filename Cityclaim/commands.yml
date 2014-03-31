@@ -86,7 +86,7 @@ rename:
     - 'cityclaims.admin.rename'
 plotconfig:
   description: 'Set the type for a specific plot'
-  usage: '/city plotconfig <city> <type|owner|name> <set|unset> <plot name|plot id> [type|owner|name]'
+  usage: '/city plotconfig <city> <type|owner|name|surfacelevel> <set|unset> <plot name|plot id> [type|owner|name]'
   permissions:
     - 'cityclaims.admin.plotconfig'
     - 'cityclaims.manage.[1].plotconfig'
@@ -97,6 +97,7 @@ plotconfig:
     - '/city plotconfig <city> owner unset <plot name|plot id>'
     - '/city plotconfig <city> name set <plot name|plot id> <name>'
     - '/city plotconfig <city> name unset <plot name|plot id>'
+    - '/city plotconfig <city> surfacelevel set <plot name|plot id> <surface level>'
 info:
   description: 'Displays info on a city'
   usage: '/city info [city]'
