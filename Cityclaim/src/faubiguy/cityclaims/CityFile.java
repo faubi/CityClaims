@@ -103,6 +103,7 @@ public class CityFile {
 			plot.name = section.getString("name");
 			plot.type = city.getType(section.getString("type"));
 			plot.id = section.getLong("id");
+			plot.surfaceLevel = section.getInt("surface_level", 64);
 			if (section.isConfigurationSection("sale")) {
 				try {
 					plot.putForSale(section.getDouble("sale.price", 0), section.isSet("sale.expires") ? new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(section.getString("sale.expires", "")) : null);
