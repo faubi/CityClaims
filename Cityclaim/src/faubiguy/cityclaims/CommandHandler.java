@@ -738,6 +738,31 @@ public final class CommandHandler {
 			sender.sendMessage(cityInfo);
 		}});
 		
+		addCommand("plotlist", new Command() {public void run(CommandSender sender, String[] arguments,	boolean confirmed) {
+			if (!checkPermission(sender, arguments)) {
+				sender.sendMessage(NO_PERMISSION_MESSAGE);
+				return;
+			}
+			City city;
+			if (arguments.length >= 1) {
+				city = City.getCity(arguments[0]);
+				if (city == null) {
+					sender.sendMessage("§cThere is no city with that name");
+					return;
+				}
+			} else {
+				city = City.getCity(getClaim(sender));
+				if (city == null) {
+					return;
+				}
+			}
+			String plots = "";
+			for (Plot plot : city.plots.values()) {
+				plots += (plots.equals("") ? "" : ", ") + (plot.name != null ? plot.name : plot.id);
+			}
+			sender.sendMessage("Plots: " + plots);
+		}});
+		
 		addCommand("plot", new Command() {public void run(CommandSender sender, String[] arguments,	boolean confirmed) {
 			if (!checkPermission(sender, arguments)) {
 				sender.sendMessage(NO_PERMISSION_MESSAGE);
