@@ -715,7 +715,7 @@ public final class CommandHandler {
 			}
 			City city;
 			if (arguments.length >= 1) {
-				city = City.getCity(arguments[1]);
+				city = City.getCity(arguments[0]);
 				if (city == null) {
 					sender.sendMessage("§cThere is no city with that name");
 					return;
