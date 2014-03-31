@@ -195,7 +195,7 @@ public class Plot {
 	}
 	
 	public Sale getSale() {
-		if (sale != null & sale.expires.before(Calendar.getInstance().getTime())) {
+		if (sale != null && sale.expires != null && sale.expires.before(Calendar.getInstance().getTime())) {
 			sale = null;
 		}
 		return sale;
