@@ -699,6 +699,7 @@ public final class CommandHandler {
 						return;
 					}
 					plot.surfaceLevel = surfaceLevel;
+					plot.update();
 					sender.sendMessage("Plot surface level successfully set to " + arguments[4]);
 				} else {
 					sender.sendMessage("§cInvalid mode (must be set)");
