@@ -1215,7 +1215,7 @@ public final class CommandHandler {
 				return;
 			}
 			Object value = flags.getFlagValueFromString(arg1, arg2);
-			if (value == null || type == "boolean" && !(value instanceof Boolean) || type == "integer" && !(value instanceof Integer) || type == "double" && !(value instanceof Double)) {
+			if (value == null || type == "boolean" && !(value instanceof Boolean) || type == "integer" && !(value instanceof Integer) || type == "double" && !(value instanceof Double) || type == "string" && !(value instanceof String)) {
 				sender.sendMessage("Flag value is not a valid " + type);
 				return;
 			}

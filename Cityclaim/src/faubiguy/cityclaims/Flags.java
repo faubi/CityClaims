@@ -66,6 +66,14 @@ public abstract class Flags {
 		return null;
 	}
 
+	public String getFlagString(String flag) {
+		Object value = getFlag(flag);
+		if (value instanceof String) {
+			return (String)value;
+		}
+		return null;
+	}
+
 	public boolean setFlag(String flag, Object value) {
 		flags.put(flag, value);
 		return true;
@@ -105,6 +113,8 @@ public abstract class Flags {
 			} else {
 				return null;
 			}
+		} else if (type == "string") {
+			return value;
 		}
 		return null;
 	}
