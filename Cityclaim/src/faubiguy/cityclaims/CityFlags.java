@@ -37,7 +37,7 @@ public class CityFlags extends Flags {
 		super(FLAG_TYPES);
 		this.city = city; 
 		flags = map;
-		inheritFrom = city.flags.typeFlags;
+		inheritFrom = CityClaims.instance.defaults;
 	}
 
 	public CityFlags(City city) { // Construct without any flags
