@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>faubiguy.cityclaims</groupId>
   <artifactId>cityclaims</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>1.1.0-SNAPSHOT</version>
   <name>CityClaims</name>
   <description>Bukkit Plugin to automate city land management</description>
   
@@ -36,7 +36,7 @@
   </dependencies>
  
   <build>
-    <finalName>ZPals</finalName>
+    <finalName>CityClaims-${project.version}</finalName>
     <sourceDirectory>src/main/java</sourceDirectory>
     <resources>
       <resource>
