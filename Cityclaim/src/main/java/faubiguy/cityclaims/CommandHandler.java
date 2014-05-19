@@ -648,17 +648,16 @@ public final class CommandHandler {
 						sender.sendMessage("§cYou must specify the type to set");
 						return;
 					}
-					if (plot.owner != null && plot.owner.equalsIgnoreCase(arguments[4])) {
-						sender.sendMessage("That user already owns that plot");
+					if(!plot.setOwner(arguments[4])) {
+						sender.sendMessage("§cThere was an error while fetching the player's UUID.");
 					}
-					plot.setOwner(arguments[4]);
 					plot.update();
 					sender.sendMessage("Plot owner set to " + arguments[4]);
 				} else if (arguments[2].equalsIgnoreCase("unset")) {//owner unset
-					if (plot.owner == null) {
+					if (plot.ownerUUID == null) {
 						sender.sendMessage("The plot is now unowned");
 					}
-					plot.setOwner(null);
+					plot.setOwner((Player)null);
 					sender.sendMessage("That plot is now unowned");
 				} else {
 					sender.sendMessage("§cInvalid mode (must be set/unset)");
@@ -811,7 +810,7 @@ public final class CommandHandler {
 					"==== Plot info ====",
 					"Name: " + (plot.name != null ? plot.name : "Unnamed"),
 					"Id: " + plot.id,
-					"Owner: " + (plot.owner != null ? plot.owner : "Unowned"),
+					"Owner: " + (plot.isOwned() ? plot.getOwnerName() : "Unowned"),
 					"Type: " + (plot.getType() != null ? plot.getType().name : "No type"),
 					"Size: " + plot.size.toString(),
 					"Sale Offer: " + (plot.getSale() != null ? eco.format(plot.getSale().price) : "Not offered"),
@@ -862,10 +861,10 @@ public final class CommandHandler {
 						plot.parent.saveTreasury();
 					}
 				} else {
-					eco.depositPlayer(plot.owner, plot.parent.getWorld().getName(), price);
+					eco.depositPlayer(plot.getOwnerName(), plot.parent.getWorld().getName(), price);
 				}
 				eco.withdrawPlayer(((Player)sender).getName(), plot.parent.getWorld().getName(), price);
-				plot.setOwner(((Player)sender).getName());
+				plot.setOwner((Player)sender);
 				plot.update();
 				sender.sendMessage("You have bought the plot for " + eco.format(price));
 			} else if (subcommand.equals("sell")) {
@@ -873,7 +872,7 @@ public final class CommandHandler {
 					sender.sendMessage("Selling plots to the city is disabled in this city");
 					return;
 				}
-				if (plot.owner == null || !plot.owner.equalsIgnoreCase(((Player)sender).getName())) {
+				if (!plot.isOwnedBy((Player)sender)) {
 					sender.sendMessage("You can't sell a plot you don't own!");
 					return;
 				}
@@ -899,14 +898,14 @@ public final class CommandHandler {
 					plot.parent.saveTreasury();
 				}
 				eco.depositPlayer(((Player)sender).getName(), plot.parent.getWorld().getName(), price);
-				plot.setOwner(null);
+				plot.setOwner((Player)null);
 				sender.sendMessage("You have sold the plot for " + eco.format(price));
 			} else if (subcommand.equals("offer")) {
 				if (!plot.getFlags().getFlagBoolean("playersell")) {
 					sender.sendMessage("Putting plots on sale to other players is disabled in this city");
 					return;
 				}
-				if (plot.owner == null || !plot.owner.equalsIgnoreCase(((Player)sender).getName())) {
+				if (plot.isOwnedBy((Player)sender)) {
 					sender.sendMessage("You can't put a plot on sale that you don't own!");
 					return;
 				}
@@ -948,7 +947,7 @@ public final class CommandHandler {
 					sender.sendMessage("The sale offer will expire in " + daysToExpireString + " syas");
 				}
 			} else if (subcommand.equals("canceloffer")) {
-				if (plot.owner == null || !plot.owner.equalsIgnoreCase(((Player)sender).getName())) {
+				if (plot.isOwnedBy((Player)sender)) {
 					sender.sendMessage("You can't cancel a sale offer for plot you don't own!");
 					return;
 				}
@@ -960,7 +959,7 @@ public final class CommandHandler {
 				plot.update();
 				sender.sendMessage("The offer has been canceled");
 			} else if (subcommand.equals("abandon")) {
-				if (plot.owner == null || !plot.owner.equalsIgnoreCase(((Player)sender).getName())) {
+				if (plot.isOwnedBy((Player)sender)) {
 					sender.sendMessage("You can't abandon a plot you don't own!");
 					return;
 				}
@@ -977,7 +976,7 @@ public final class CommandHandler {
 					requireConfirm(sender, originalArguments);
 					return;
 				}
-				plot.setOwner(null);
+				plot.setOwner((Player)null);
 				sender.sendMessage("The plot has been abandoned.");
 			} else {
 				sender.sendMessage("§cInvalid subcommand: " + arguments[0]);
