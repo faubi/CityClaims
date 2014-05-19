@@ -44,7 +44,7 @@ public class CityClaims extends JavaPlugin {
 			return error; // Cancel initialization because of error
 		}
 		CityFlags.loadGlobalFlags();
-		City.cities = new HashMap<>();
+		City.cities = new HashMap<String, City>();
 		File cityDir = new File(dataPath, "cities");
 		if (cityDir.isDirectory()){
 			for (String cityname : cityDir.list()) {

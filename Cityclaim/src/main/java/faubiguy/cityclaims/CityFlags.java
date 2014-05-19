@@ -21,10 +21,10 @@ public class CityFlags extends Flags {
 	public PlotType.TypeFlags typeFlags = new PlotType.TypeFlags(null);
 	
 	static {
-		Map<String,Object> defaultsMap = new HashMap<>();
+		Map<String,Object> defaultsMap = new HashMap<String, Object>();
 		defaultsMap.put("hidden", false);
 		DEFAULTS = new CityFlags(null, defaultsMap);		
-		FLAG_TYPES = new HashMap<>();
+		FLAG_TYPES = new HashMap<String, String>();
 		FLAG_TYPES.put("hidden", "boolean");
 		
 	}
@@ -131,7 +131,7 @@ public class CityFlags extends Flags {
 			CityClaims.instance.lockedFlags = new HashSet<String>(flagFile
 					.getConfigurationSection("locked").getStringList(""));
 		} else {
-			CityClaims.instance.lockedFlags = new HashSet<>();
+			CityClaims.instance.lockedFlags = new HashSet<String>();
 		}
 	}
 
@@ -140,7 +140,7 @@ public class CityFlags extends Flags {
 				.loadConfiguration(new File(CityClaims.instance.dataPath,
 						"flags.yml"));
 		flagFile.createSection("flags", CityClaims.instance.defaults.getMap());
-		flagFile.set("locked", new ArrayList<>(CityClaims.instance.lockedFlags));
+		flagFile.set("locked", new ArrayList<String>(CityClaims.instance.lockedFlags));
 		try {
 			flagFile.save(new File(CityClaims.instance.dataPath, "flags.yml"));
 		} catch (IOException e) {
@@ -162,7 +162,7 @@ public class CityFlags extends Flags {
 	}
 	
 	public Map<String,Object> getMap() {
-		Map<String,Object> map = new HashMap<>();
+		Map<String,Object> map = new HashMap<String, Object>();
 		for (Map.Entry<String,Object> entry : flags.entrySet()) {
 			map.put(entry.getKey(), entry.getValue());
 		}

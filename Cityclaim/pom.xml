@@ -19,6 +19,20 @@
       <artifactId>bukkit</artifactId>
       <version>1.7.2-R0.1-SNAPSHOT</version>
     </dependency>
+    <dependency>
+      <groupId>me.ryanhamshire</groupId>
+      <artifactId>griefprevention</artifactId>
+      <version>7.7</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/dependencies/GriefPrevention.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>net.milkbowl</groupId>
+      <artifactId>vault</artifactId>
+      <version>1.2.31</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/dependencies/Vault.jar</systemPath>
+  </dependency>
   </dependencies>
  
   <build>
@@ -29,10 +43,6 @@
         <targetPath>.</targetPath>
         <filtering>true</filtering>
         <directory>${basedir}/src/main/resources/</directory>
-        <includes>
-          <include>plugin.yml</include>
-          <include>commands.yml</include>
-        </includes>
       </resource>
     </resources>
     <plugins>

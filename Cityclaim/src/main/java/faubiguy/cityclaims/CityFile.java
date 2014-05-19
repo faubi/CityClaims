@@ -116,7 +116,7 @@ public class CityFile {
 	}
 
 	public Map<Long, Plot> loadPlots() throws CityLoadingException {
-		Map<Long, Plot> plots = new HashMap<>();
+		Map<Long, Plot> plots = new HashMap<Long, Plot>();
 		if(!file.isConfigurationSection("plots")) {
 			file.createSection("plots");
 		}
@@ -182,7 +182,7 @@ public class CityFile {
 				try {
 					advancedPricing.addRange(
 							AdvancedPricing.Range.fromString(entry.getKey()),
-							(double) entry.getValue());
+							(Double) entry.getValue());
 				} catch (ClassCastException e) {
 					return null;
 				}
@@ -193,7 +193,7 @@ public class CityFile {
 	}
 
 	public Set<PlotType> loadTypes() throws CityLoadingException {
-		Set<PlotType> types = new HashSet<>();
+		Set<PlotType> types = new HashSet<PlotType>();
 		if (file.isConfigurationSection("types")) {
 			for (String key : file.getConfigurationSection("types").getKeys(false)) {
 				PlotType type = loadType(key);
@@ -243,7 +243,7 @@ public class CityFile {
 			return new CityFlags(city);
 		}
 		ConfigurationSection flagSection = file.getConfigurationSection("flags");
-		Map<String,Object> flagMap = new HashMap<>();
+		Map<String,Object> flagMap = new HashMap<String, Object>();
 		for (String flag : CityFlags.DEFAULTS.listFlags(true)) {
 			if (flagSection.isSet(flag)) {
 				String type = CityFlags.FLAG_TYPES.get(flag);
@@ -277,7 +277,7 @@ public class CityFile {
 	}
 
 	public Map<PlotSize, String> loadSizeTypes() {
-		Map<PlotSize, String> sizeMap = new HashMap<>();
+		Map<PlotSize, String> sizeMap = new HashMap<PlotSize, String>();
 		if (file.isConfigurationSection("sizes")) {
 			for (Map.Entry<String, Object> entry : file
 					.getConfigurationSection("sizes").getValues(false)
@@ -291,7 +291,7 @@ public class CityFile {
 	}
 
 	public boolean saveSizeTypes(boolean saveFile) {
-		Map<String, String> sizeMap = new HashMap<>();
+		Map<String, String> sizeMap = new HashMap<String, String>();
 		for (Map.Entry<PlotSize, String> entry : city.sizeTypes.entrySet()) {
 			sizeMap.put(entry.getKey().toString(), entry.getValue());
 		}

@@ -1,0 +1,19 @@
+name: CityClaims
+version: 1.0.2
+author: faubiguy
+
+main: faubiguy.cityclaims.CityClaims
+depend: [GriefPrevention, Vault]
+
+commands:
+  city:
+    description: General CityClaims command
+  buyplot:
+    description: Buy a plot (alias for /city plot buy) 
+    permission: 'cityclaims.general.plot.buy'
+  sellplot:
+    description: Sell plot back to the city (alias for /city plot sell) 
+    permission: 'cityclaims.general.plot.sell'
+  abandonplot:
+    description: Sell plot back to the city (alias for /city plot abandon) 
+    permission: 'cityclaims.general.plot.abandon'

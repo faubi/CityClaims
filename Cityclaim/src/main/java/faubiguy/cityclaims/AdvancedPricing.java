@@ -71,7 +71,7 @@ public class AdvancedPricing {
 		}
 	}
 
-	private Map<Range, Double> ranges = new HashMap<>();
+	private Map<Range, Double> ranges = new HashMap<Range, Double>();
 
 	public Double getPrice(int owned) {
 		for (Map.Entry<Range, Double> entry : ranges.entrySet()) {

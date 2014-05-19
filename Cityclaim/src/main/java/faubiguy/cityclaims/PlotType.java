@@ -65,7 +65,7 @@ public class PlotType {
 		public static final Map<String, String> TYPE_FLAG_TYPES;
 		public static final Flags DEFAULTS;
 		static {
-			TYPE_FLAG_TYPES = new HashMap<>();
+			TYPE_FLAG_TYPES = new HashMap<String, String>();
 			TYPE_FLAG_TYPES.put("price", "double");
 			TYPE_FLAG_TYPES.put("plotlimit", "integer");
 			TYPE_FLAG_TYPES.put("requireempty", "boolean");
@@ -73,7 +73,7 @@ public class PlotType {
 			TYPE_FLAG_TYPES.put("sellmultiplier", "double");
 			TYPE_FLAG_TYPES.put("playersell", "boolean");
 			TYPE_FLAG_TYPES.put("usetreasury", "boolean");
-			Map<String,Object> defaultsMap = new HashMap<>();
+			Map<String,Object> defaultsMap = new HashMap<String, Object>();
 			defaultsMap.put("price", 0);
 			defaultsMap.put("plotlimit", -1);
 			defaultsMap.put("requireempty", true);

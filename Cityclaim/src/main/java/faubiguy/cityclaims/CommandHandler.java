@@ -148,8 +148,8 @@ public final class CommandHandler {
 	}
 	
 	static void initialize() {
-		commands = new TreeMap<>();
-		unconfirmed = new HashMap<>();
+		commands = new TreeMap<String, Command>();
+		unconfirmed = new HashMap<String, CommandConfirmationTimeoutTask>();
 		
 		addCommand("create", new Command() {public void run(CommandSender sender, String[] arguments, boolean confirmed) {
 			if (!checkPermission(sender, arguments)) {
@@ -984,7 +984,7 @@ public final class CommandHandler {
 			}
 		}
 		
-		private Map<String,Integer> argumentCount = new HashMap<>();
+		private Map<String,Integer> argumentCount = new HashMap<String, Integer>();
 		
 		public void init() {
 			argumentCount.put("offer", 2);
@@ -1100,7 +1100,7 @@ public final class CommandHandler {
 			}
 			String[] outputText;
 			if (usePage) {
-				List<String> helpLines = new ArrayList<>(commands.size());
+				List<String> helpLines = new ArrayList<String>(commands.size());
 				for (Command command : commands.values()) {
 					if (command.checkPermission(sender, null)) {
 						helpLines.add("§9/city " + command.name + ": §b" + command.description);

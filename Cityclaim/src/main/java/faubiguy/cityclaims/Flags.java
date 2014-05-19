@@ -23,7 +23,7 @@ public abstract class Flags {
 	protected Map<String, Object> flags;
 
 	public List<String> listFlags() {
-		return new ArrayList<>(getFlagTypes().keySet());
+		return new ArrayList<String>(getFlagTypes().keySet());
 	}
 
 	public Map<String, Object> getMap() {

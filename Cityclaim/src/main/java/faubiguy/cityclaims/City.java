@@ -101,9 +101,9 @@ public class City {
 		city.name = name;
 		city.base = base;
 		city.flags = new CityFlags(city);
-		city.types = new HashSet<>();
-		city.plots = new HashMap<>();
-		city.sizeTypes = new HashMap<>();
+		city.types = new HashSet<PlotType>();
+		city.plots = new HashMap<Long, Plot>();
+		city.sizeTypes = new HashMap<PlotSize, String>();
 		city.id = base.getID();
 		city.treasury = 0;
 		city.nextPlotId = 0;
@@ -307,7 +307,7 @@ public class City {
 		FileConfiguration idFile = YamlConfiguration
 				.loadConfiguration(new File(CityClaims.instance.dataPath,
 						"ids.yml"));
-		Map<Long, String> idMap = new HashMap<>();
+		Map<Long, String> idMap = new HashMap<Long, String>();
 		Map<String, Object> loadedMap = idFile.getValues(false);
 		try {
 			for (Map.Entry<String, Object> entry : loadedMap.entrySet()) {
