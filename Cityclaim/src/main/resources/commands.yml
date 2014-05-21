@@ -42,7 +42,7 @@ globalflags:
     - '/city globalflags listlocks'
 type:
   description: 'Manage plot types for the specified city'
-  usage: '/city types <city> <add|remove|flags|list|advancedpricing> [type] [other arguments]'
+  usage: '/city type <city> <add|remove|flags|list|advancedpricing> [type] [other arguments]'
   permissions:
     - 'cityclaims.admin.type'
     - 'cityclaims.manage.[1].type'
