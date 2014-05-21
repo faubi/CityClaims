@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>faubiguy.cityclaims</groupId>
   <artifactId>cityclaims</artifactId>
-  <version>1.1.0-SNAPSHOT</version>
+  <version>1.1.0</version>
   <name>CityClaims</name>
   <description>Bukkit Plugin to automate city land management</description>
   
