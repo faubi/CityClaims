@@ -1,6 +1,6 @@
 create:
   description: 'Creates a new city using the specified claim'
-  usage: '/city create <name> [claim-id]'
+  usage: '/city create <name> [region-id]'
   permissions:
     - 'cityclaims.admin.create'
 delete:
@@ -41,7 +41,7 @@ globalflags:
     - '/city globalflags unlock <flag>'
     - '/city globalflags listlocks'
 type:
-  description: 'Adds a new plot type for the specified city'
+  description: 'Manage plot types for the specified city'
   usage: '/city types <city> <add|remove|flags|list|advancedpricing> [type] [other arguments]'
   permissions:
     - 'cityclaims.admin.type'
@@ -85,7 +85,7 @@ rename:
   permissions:
     - 'cityclaims.admin.rename'
 plotconfig:
-  description: 'Set the type for a specific plot'
+  description: 'Set parameters for a specific plot'
   usage: '/city plotconfig <city> <type|owner|name|surfacelevel> <set|unset> <plot name|plot id> [type|owner|name]'
   permissions:
     - 'cityclaims.admin.plotconfig'

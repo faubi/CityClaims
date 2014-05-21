@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import me.ryanhamshire.GriefPrevention.Claim;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
@@ -99,7 +100,8 @@ public class CityFile {
 		plot.size = new PlotSize(plotClaim.getWidth(), plotClaim.getHeight());
 		if (file.isConfigurationSection("plots." + Plot.getStringFromLocation(loc))) {
 			ConfigurationSection section = file.getConfigurationSection("plots." + Plot.getStringFromLocation(loc));
-			plot.owner = section.getString("owner");
+			plot.ownerUUID = UUID.fromString(section.getString("owner_UUID"));
+			plot.ownerName = section.getString("owner_name");
 			plot.name = section.getString("name");
 			plot.type = city.getType(section.getString("type"));
 			plot.id = section.getLong("id");
@@ -133,7 +135,8 @@ public class CityFile {
 	public boolean savePlot(Plot plot, boolean saveFile) {
 		ConfigurationSection section = file.createSection("plots."
 				+ plot.getCornerString());
-		section.set("owner", plot.owner);
+		section.set("owner_UUID", plot.ownerUUID.toString());
+		section.set("owner_name", plot.ownerName);
 		section.set("name", plot.name);
 		section.set("id", plot.id);
 		section.set("type", plot.type == null ? null : plot.type.name);

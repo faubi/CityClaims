@@ -2,8 +2,10 @@ package faubiguy.cityclaims;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.UUID;
 
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import me.ryanhamshire.GriefPrevention.Claim;
@@ -18,7 +20,8 @@ public class Plot {
 	public Claim base;
 	public PlotSize size;
 	public PlotType type;
-	public String owner;
+	public UUID ownerUUID;
+	public String ownerName;
 	private Sale sale;
 	public int surfaceLevel = 64;
 	public long id;
@@ -37,6 +40,28 @@ public class Plot {
 	
 	public Plot(Claim base) {
 		this(base, null);
+	}
+	
+	public String getOwnerName() {
+		for(Player player : CityClaims.instance.getServer().getOnlinePlayers()) {
+			if (player.getUniqueId().equals(ownerUUID)) {
+				String name = player.getName();
+				if(!name.equals(ownerName)) {
+					ownerName = name;
+					update();
+				}
+				return name;
+			}
+		}
+		return ownerName;
+	}
+	
+	public boolean isOwned() {
+		return ownerUUID != null;
+	}
+	
+	public boolean isOwnedBy(Player player) {
+		return isOwned() && ownerUUID.equals(player.getUniqueId());
 	}
 	
 	public Plot(Claim base, City city) {
@@ -74,15 +99,34 @@ public class Plot {
 		return city.getPlot(loc);
 	}
 
-	public void setOwner(String username) {
+	public boolean setOwner(String playerName) {
+		try {
+			ownerUUID = playerName == null ? null : UUIDFetcher.getUUIDOf(playerName);
+		} catch (Exception e) {
+			return false;
+		}
 		base.clearPermissions();
-		base.removeManager(owner);
-		owner = username;
-		if (!(owner == "" || owner == null)) {
-			base.addManager(owner);
-			base.setPermission(owner, ClaimPermission.Build);
+		base.removeManager(getOwnerName());
+		ownerName = playerName;
+		if (playerName != null) {
+			base.addManager(ownerName);
+			base.setPermission(ownerName, ClaimPermission.Build);
 		}
 		setSale(null);
+		return true;
+	}
+
+	public boolean setOwner(Player player) {
+		base.clearPermissions();
+		base.removeManager(getOwnerName());
+		ownerName = player.getName();
+		ownerUUID = player == null ? null : player.getUniqueId();
+		if (player != null) {
+			base.addManager(ownerName);
+			base.setPermission(ownerName, ClaimPermission.Build);
+		}
+		setSale(null);
+		return true;
 	}
 
 	public boolean setName(String name) {
@@ -115,7 +159,7 @@ public class Plot {
 	}
 	
 	public Double getPrice(Player player) {
-		if (owner == null) {
+		if (!isOwned()) {
 			return getCityPrice(player);
 		} else if (getSale() != null) {
 			return getSale().price;

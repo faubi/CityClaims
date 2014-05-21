@@ -290,7 +290,7 @@ public class City {
 	public int getOwnedPlots(Player player, PlotType type) {
 		int owned = 0;
 		for (Plot plot : plots.values()) {
-			if (plot.owner != null && plot.owner.equals(player.getName()) && (type == null || type.equals(plot.type))) {
+			if (plot.ownerUUID != null && plot.ownerUUID.equals(player.getUniqueId()) && (type == null || type.equals(plot.type))) {
 				owned++;
 			}
 		}
