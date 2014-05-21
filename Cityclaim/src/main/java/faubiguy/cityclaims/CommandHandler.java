@@ -268,6 +268,7 @@ public final class CommandHandler {
 			if (mode.equalsIgnoreCase("add")) {
 				if (arguments[0] == null) {
 					sender.sendMessage("§cYou must specify a name for the new type");
+					return;
 				}
 				double price = 0;
 				if (arguments[1] != null) {
