@@ -100,8 +100,10 @@ public class CityFile {
 		plot.size = new PlotSize(plotClaim.getWidth(), plotClaim.getHeight());
 		if (file.isConfigurationSection("plots." + Plot.getStringFromLocation(loc))) {
 			ConfigurationSection section = file.getConfigurationSection("plots." + Plot.getStringFromLocation(loc));
-			plot.ownerUUID = UUID.fromString(section.getString("owner_UUID"));
-			plot.ownerName = section.getString("owner_name");
+			String UUIDString = section.getString("owner_UUID");
+			plot.ownerUUID = UUIDString.equals("null") ? null : UUID.fromString(UUIDString);
+			String ownerName = section.getString("owner_name");
+			plot.ownerName = ownerName.equals("null") ? null : ownerName;
 			plot.name = section.getString("name");
 			plot.type = city.getType(section.getString("type"));
 			plot.id = section.getLong("id");
@@ -135,8 +137,8 @@ public class CityFile {
 	public boolean savePlot(Plot plot, boolean saveFile) {
 		ConfigurationSection section = file.createSection("plots."
 				+ plot.getCornerString());
-		section.set("owner_UUID", plot.ownerUUID.toString());
-		section.set("owner_name", plot.ownerName);
+		section.set("owner_UUID", plot.isOwned() ? plot.ownerUUID.toString() : "null");
+		section.set("owner_name", plot.isOwned() ? plot.ownerName : "null");
 		section.set("name", plot.name);
 		section.set("id", plot.id);
 		section.set("type", plot.type == null ? null : plot.type.name);
