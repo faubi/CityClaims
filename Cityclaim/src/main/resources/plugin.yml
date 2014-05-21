@@ -1,5 +1,5 @@
 name: CityClaims
-version: 1.0.2
+version: 1.1.0
 author: faubiguy
 
 main: faubiguy.cityclaims.CityClaims
@@ -15,5 +15,5 @@ commands:
     description: Sell plot back to the city (alias for /city plot sell) 
     permission: 'cityclaims.general.plot.sell'
   abandonplot:
-    description: Sell plot back to the city (alias for /city plot abandon) 
+    description: Return plot back to the city (alias for /city plot abandon) 
     permission: 'cityclaims.general.plot.abandon'
