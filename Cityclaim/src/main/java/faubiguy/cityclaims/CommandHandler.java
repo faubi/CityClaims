@@ -51,11 +51,11 @@ public final class CommandHandler {
 			for (String permission : permissions) {
 				Matcher m = permissionSubstitutionPattern.matcher(permission);
 				boolean skip = false;
-				boolean subnode = arguments == null;
+				boolean subnode = arguments.length == 0;
 				while (m.find()) {
 					String match = m.group();
 					int value = Integer.parseInt(match.substring(1, match.length() - 1));
-					if (arguments != null && arguments.length < value) {
+					if (arguments.length > 0 && arguments.length < value) {
 						skip = true;
 						break;
 					}
@@ -320,8 +320,12 @@ public final class CommandHandler {
 				}
 				if (!arguments[1].equals("get") && !arguments[1].equals("set") && !arguments[1].equals("list") && !arguments[1].equals("unset")) {
 					sender.sendMessage("§cInvalid flag mode: " + arguments[1]);
+					return;
 				}
 				flagCommand(sender, type.flags, arguments[1], arguments[2], arguments[3]);
+				if (arguments[1].equals("set") || arguments[1].equals("unset")) {
+					type.save();
+				}
 			} else if (mode.equalsIgnoreCase("list")) {
 				String typesList = "";
 				for (PlotType type : city.types) {
@@ -724,6 +728,7 @@ public final class CommandHandler {
 			} else {
 				city = City.getCity(getClaim(sender));
 				if (city == null) {
+					sender.sendMessage("§cThere is no city where you are standing");
 					return;
 				}
 			}
