@@ -83,7 +83,11 @@ public class City {
 			throw new CityLoadingException("No such city: " + name, name);
 		}
 		file.loadFile();
-		file.loadCity();
+		try {
+			file.loadCity();
+		} catch (Exception e) {
+			throw new CityLoadingException("An unknown error occured. The data file " + name + ".yml may be invalid.", name);
+		}
 		cities.put(name, city);
 	}
 
